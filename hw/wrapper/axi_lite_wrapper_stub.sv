@@ -1,4 +1,4 @@
-﻿`timescale 1ns / 1ps
+`timescale 1ns / 1ps
 
 module axi_lite_wrapper_stub (
   input  logic        aclk,

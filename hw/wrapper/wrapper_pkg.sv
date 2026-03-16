@@ -1,4 +1,4 @@
-﻿package wrapper_pkg;
+package wrapper_pkg;
   localparam int unsigned CONTROL_ADDR = 'h000;
   localparam int unsigned STATUS_ADDR = 'h004;
   localparam int unsigned ERROR_CODE_ADDR = 'h008;

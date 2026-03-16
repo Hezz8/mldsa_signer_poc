@@ -1,4 +1,4 @@
-﻿\chapter{Detailed Throughput Model}
+\chapter{Detailed Throughput Model}
 
 \section*{Purpose}
 This chapter extends the basic latency model into a throughput-oriented view while keeping the PoC focus on correctness.
@@ -11,9 +11,9 @@ Throughput \approx \frac{1}{T_{mmio\_setup} + T_{sign} + T_{mmio\_readback} + T_
 
 \section{Dominant Terms}
 \begin{itemize}[leftmargin=*]
-  \item `T_{sign}` will depend on the eventual ML-DSA hardware implementation.
-  \item `T_{mmio\_readback}` scales with signature transfer volume and wrapper organization.
-  \item `T_{software\_overhead}` includes daemon scheduling, validation, and response handling.
+  \item $T_{sign}$ will depend on the eventual ML-DSA hardware implementation.
+  \item $T_{mmio\_readback}$ scales with signature transfer volume and wrapper organization.
+  \item $T_{software\_overhead}$ includes daemon scheduling, validation, and response handling.
 \end{itemize}
 
 \section{PoC Scenarios}

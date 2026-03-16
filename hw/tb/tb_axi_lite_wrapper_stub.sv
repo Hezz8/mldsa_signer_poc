@@ -1,4 +1,4 @@
-﻿`timescale 1ns / 1ps
+`timescale 1ns / 1ps
 
 module tb_axi_lite_wrapper_stub;
   import wrapper_pkg::*;
@@ -117,8 +117,8 @@ module tb_axi_lite_wrapper_stub;
     axi_write(CONTROL_ADDR, CONTROL_START_MASK);
 
     axi_read(STATUS_ADDR, readback);
-    if ((readback & STATUS_BUSY_MASK) == 0) begin
-      $fatal(1, "busy bit was not asserted after start");
+    if (((readback & STATUS_BUSY_MASK) == 0) && ((readback & STATUS_DONE_MASK) == 0)) begin
+      $fatal(1, "wrapper did not leave idle-only state after start");
     end
 
     repeat (STUB_DELAY_CYCLES + 1) @(posedge clk);

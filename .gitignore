@@ -1,4 +1,4 @@
-﻿# Operating system and editor noise
+# Operating system and editor noise
 .DS_Store
 Thumbs.db
 *.swp
@@ -18,7 +18,7 @@ __pycache__/
 venv/
 
 # Build and packaging
-build/
+/build/
 dist/
 out/
 coverage/
@@ -62,3 +62,7 @@ docs/build/
 # Generated test artifacts
 artifacts/
 results/
+# Repo-local portable tooling
+tools/third_party/downloads/
+tools/third_party/oss-cad-suite/
+tools/third_party/tectonic/

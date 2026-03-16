@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import importlib
 import shutil
@@ -55,11 +55,14 @@ def main() -> int:
         ok, output = import_status(module_name)
         print(f"{label}={'OK' if ok else 'MISSING'} {output}")
 
+    portable_oss_bin = repo_root / "tools" / "third_party" / "oss-cad-suite" / "oss-cad-suite" / "bin"
+    portable_tex_dir = repo_root / "tools" / "third_party" / "tectonic"
     tool_checks = {
-        "verilator": shutil.which("verilator"),
-        "iverilog": shutil.which("iverilog"),
+        "verilator": shutil.which("verilator") or shutil.which("verilator", path=str(portable_oss_bin)),
+        "iverilog": shutil.which("iverilog") or shutil.which("iverilog", path=str(portable_oss_bin)),
         "latexmk": shutil.which("latexmk"),
         "pdflatex": shutil.which("pdflatex"),
+        "tectonic": shutil.which("tectonic") or shutil.which("tectonic", path=str(portable_tex_dir)),
     }
 
     for label, path in tool_checks.items():
