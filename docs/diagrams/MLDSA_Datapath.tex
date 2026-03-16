@@ -1,0 +1,27 @@
+﻿\chapter{ML-DSA Datapath Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  node distance=1.4cm and 1.0cm,
+  block/.style={draw, rounded corners, minimum width=3cm, minimum height=0.9cm, align=center},
+  line/.style={-Latex, thick}
+]
+\node[block] (digest) {Digest Latch};
+\node[block, right=of digest] (ctrl) {Control FSM};
+\node[block, right=of ctrl] (adapter) {Signing Engine Adapter};
+\node[block, below=of adapter] (engine) {Future ML-DSA Core};
+\node[block, below=of ctrl] (keys) {PoC Key Store};
+\node[block, left=of keys] (sigbuf) {Signature Buffer};
+
+\draw[line] (digest) -- (ctrl);
+\draw[line] (ctrl) -- (adapter);
+\draw[line] (adapter) -- (engine);
+\draw[line] (keys) -- (ctrl);
+\draw[line] (engine) -- (sigbuf);
+\draw[line] (ctrl) -- (sigbuf);
+\end{tikzpicture}
+\caption{Abstract PL-side datapath organization used for planning and wrapper integration.}
+\end{figure}
+
+This diagram is intentionally abstract. It defines integration boundaries and responsibilities without committing to a concrete cryptographic microarchitecture.

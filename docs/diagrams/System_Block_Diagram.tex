@@ -1,0 +1,24 @@
+﻿\chapter{System Block Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  node distance=1.8cm and 1.2cm,
+  block/.style={draw, rounded corners, minimum width=3.3cm, minimum height=1cm, align=center},
+  line/.style={-Latex, thick}
+]
+\node[block] (client) {Remote Client};
+\node[block, right=of client] (grpc) {gRPC Signing Daemon\\Linux on Zynq PS};
+\node[block, right=of grpc] (axi) {AXI-Lite MMIO\\Wrapper Interface};
+\node[block, right=of axi] (core) {Future ML-DSA-87\\Signing Core};
+\node[block, below=of core] (keys) {PoC Key Storage\\in PL};
+
+\draw[line] (client) -- node[above] {Ethernet} (grpc);
+\draw[line] (grpc) -- node[above] {MMIO transactions} (axi);
+\draw[line] (axi) -- node[above] {control, status, data} (core);
+\draw[line] (keys) -- (core);
+\end{tikzpicture}
+\caption{Initial proof-of-concept system partition.}
+\end{figure}
+
+The diagram emphasizes the intended separation between the network service, PS-side orchestration, wrapper boundary, and PL-resident signing function.

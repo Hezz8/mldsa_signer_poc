@@ -1,0 +1,23 @@
+﻿\chapter{Hardware Microarchitecture}
+
+\section*{Purpose}
+This chapter describes the planned internal organization of the PL-side design at a level suitable for early integration planning.
+
+\section{Planned Blocks}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{AXI-Lite wrapper:} register decode, command acceptance, status reporting, and data windows.
+  \item \textbf{Digest latch:} captures the 64-byte input digest from the wrapper-facing register set.
+  \item \textbf{Control FSM:} sequences the signing transaction and arbitrates access to output buffers.
+  \item \textbf{Key store block:} holds PoC key material provisioned inside PL implementation assets.
+  \item \textbf{Signing engine adapter:} isolates the wrapper contract from the eventual ML-DSA core-specific handshake.
+  \item \textbf{Signature buffer:} stores output bytes until software reads them back.
+\end{itemize}
+
+\section{Clocking and Reset}
+The initial expectation is a single primary PL clock domain for the wrapper and signing path. Reset behavior shall force the wrapper into an idle, non-busy state with status cleared.
+
+\section{Dataflow}
+Software writes the digest to wrapper-visible registers, the control FSM latches the request, the signing path produces an output signature, and the result is transferred into a PS-readable buffer with an accompanying reported length.
+
+\section{Microarchitecture Constraints}
+The microarchitecture shall support repeated signing requests without requiring full PL reconfiguration or manual state cleanup between successful transactions.

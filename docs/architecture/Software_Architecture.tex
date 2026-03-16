@@ -1,0 +1,36 @@
+﻿\chapter{Software Architecture}
+
+\section*{Purpose}
+This chapter defines the baseline structure of the Linux-side software stack hosted on the Zynq PS.
+
+\section{Implemented Skeleton in the Current Phase}
+The repository now contains an executable software scaffold that preserves the intended system layering while keeping the signing path stubbed. The current implementation is sufficient to validate request handling, register sequencing, deterministic completion, and signature readback without requiring real PL hardware.
+
+\section{Current Components}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Service core:} a transport-independent signing service that validates a 64-byte digest and orchestrates the MMIO device interface.
+  \item \textbf{MMIO device abstraction:} a high-level device API with methods for digest writes, start, wait, readback, and clear-status behavior.
+  \item \textbf{Backend interface:} a clean seam for future replacement of the fake backend with real PS/PL MMIO access.
+  \item \textbf{Fake backend:} a deterministic local register model that emulates busy and done behavior and returns a fake signature buffer.
+  \item \textbf{Optional gRPC transport:} a runtime-generated Python gRPC binding path that can be enabled once `grpcio`, `grpcio-tools`, and `protobuf` are available.
+  \item \textbf{Local fallback harness:} an in-process execution path used for immediate tests and smoke checks in dependency-constrained environments.
+\end{itemize}
+
+\section{Operational Model}
+The daemon receives a `SignPrehash` request, validates the 64-byte digest, clears stale status, writes the digest through the MMIO abstraction, asserts start, waits for deterministic completion, reads back the signature bytes, and returns the response. In the current stub phase, the hardware-visible signature is synthesized by the fake backend rather than by a cryptographic core.
+
+\section{Stub Behavior}
+The current software stack assumes the following stub contract:
+\begin{itemize}[leftmargin=*]
+  \item input digest size is exactly 64 bytes
+  \item start transitions the backend into busy
+  \item completion occurs after a deterministic two-tick progression in the fake backend
+  \item signature length is fixed at 128 bytes
+  \item signature bytes are `STUBSIG || digest || zero padding`
+\end{itemize}
+
+\section{Error Model}
+The software layer distinguishes between input validation errors, dependency or transport availability errors, MMIO backend failures, hardware-reported errors, and timeout conditions. The current implementation is intentionally synchronous and single-operation oriented.
+
+\section{Design Constraints}
+The software architecture must remain compatible with a later replacement of the fake backend by real MMIO access on Zynq Linux and a later replacement of the stubbed signing path by the actual ML-DSA hardware integration.

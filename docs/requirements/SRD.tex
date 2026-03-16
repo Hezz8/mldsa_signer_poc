@@ -1,0 +1,45 @@
+﻿\chapter{System Requirements Document}
+
+\section*{Purpose}
+This document defines the baseline requirements for the `pq-signature-appliance` proof of concept. The appliance performs ML-DSA-87 signatures on a 64-byte digest using a hardware accelerator in PL controlled by Linux software on the Zynq UltraScale+ PS.
+
+\section{Scope}
+The initial system target is a correctness-focused signing appliance with a gRPC network API and a hardware-assisted signing path. The current repository does not yet contain the actual cryptographic core implementation.
+
+\section{Functional Requirements}
+\begin{longtable}{p{0.15\textwidth} p{0.75\textwidth}}
+\toprule
+ID & Requirement \\
+\midrule
+FR-001 & The system shall expose a gRPC service for pre-hash signing requests over Ethernet. \\
+FR-002 & The signing request shall contain exactly one 64-byte digest for the initial PoC API. \\
+FR-003 & Linux software on the PS shall validate request shape before accessing hardware. \\
+FR-004 & The PS shall communicate with the PL through an AXI-Lite wrapper interface for the PoC. \\
+FR-005 & The PL-side signing path shall report busy, done, and error status to software. \\
+FR-006 & The system shall return the generated signature and its reported length to the client. \\
+FR-007 & The system shall support repeated signing requests during continuous operation testing. \\
+FR-008 & The repository shall preserve a clean separation between software, hardware, verification, and planning artifacts. \\
+FR-009 & The PoC may use hardcoded key material in PL strictly for controlled bring-up and verification. \\
+FR-010 & The design shall allow later replacement of placeholder components with a real ML-DSA core without redefining the external service contract. \\
+\bottomrule
+\end{longtable}
+
+\section{Non-Functional Requirements}
+\begin{longtable}{p{0.15\textwidth} p{0.75\textwidth}}
+\toprule
+ID & Requirement \\
+\midrule
+NFR-001 & The initial PoC shall prioritize correctness and observability over maximum throughput. \\
+NFR-002 & Architecture and interface changes shall be documented in LaTeX and planning artifacts. \\
+NFR-003 & The system shall be structured for incremental multi-agent development. \\
+NFR-004 & Hardware and software subsystems shall be independently testable before full integration. \\
+NFR-005 & Generated EDA artifacts shall not be treated as source unless explicitly approved. \\
+\bottomrule
+\end{longtable}
+
+\section{Assumptions and Exclusions}
+\begin{itemize}[leftmargin=*]
+  \item No third-party ML-DSA implementation is integrated at bootstrap time.
+  \item Final key storage, provisioning, and production hardening are out of scope for the initial PoC.
+  \item Throughput targets beyond basic modeling are deferred to later project phases.
+\end{itemize}

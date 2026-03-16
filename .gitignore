@@ -1,0 +1,64 @@
+﻿# Operating system and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.bak
+.vscode/
+.idea/
+
+# Python and local tooling
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Build and packaging
+build/
+dist/
+out/
+coverage/
+htmlcov/
+
+# LaTeX build products
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.idx
+*.ilg
+*.ind
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+docs/build/
+
+# FPGA and EDA generated artifacts
+.Xil/
+*.bit
+*.bin
+*.dcp
+*.jou
+*.pb
+*.rpt
+*.runs/
+*.sim/
+*.str
+*.wdb
+*.wcfg
+*.xpr
+*.xsa
+
+# Generated test artifacts
+artifacts/
+results/

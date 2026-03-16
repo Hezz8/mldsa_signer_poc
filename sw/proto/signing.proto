@@ -1,0 +1,19 @@
+﻿syntax = "proto3";
+
+package pqsignature.v1;
+
+// Canonical external API for the appliance.
+// The current implementation phase uses a deterministic stub signing path.
+service SigningService {
+  rpc SignPrehash(SignPrehashRequest) returns (SignPrehashResponse);
+}
+
+message SignPrehashRequest {
+  bytes digest = 1; // Must be exactly 64 bytes for the current PoC contract.
+}
+
+message SignPrehashResponse {
+  bytes signature = 1;       // Deterministic stub output in the current phase.
+  uint32 signature_length = 2;
+  string status = 3;
+}

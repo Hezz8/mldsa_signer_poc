@@ -1,0 +1,24 @@
+﻿\chapter{Interface Control Document}
+
+\section*{Purpose}
+This chapter defines the baseline interface contracts between the external client and the appliance, and between PS software and PL logic.
+
+\section{External Service Interface}
+The appliance exposes a gRPC service named `SigningService` with a `SignPrehash` method. The request contains a single digest field that shall be exactly 64 bytes. The response returns signature bytes, a reported signature length, and a coarse status string for the PoC.
+
+\section{External Interface Semantics}
+\begin{itemize}[leftmargin=*]
+  \item Requests that do not contain exactly 64 digest bytes shall be rejected in software.
+  \item The PoC service processes one signing operation at a time unless future software updates explicitly add queueing.
+  \item The service shall surface hardware timeout or error conditions to the client.
+\end{itemize}
+
+\section{PS/PL Interface}
+The PS/PL boundary is an AXI-Lite register interface. Software writes command and digest registers, triggers execution, polls or waits for completion, and reads status plus signature output data.
+
+\section{Interface Stability Rules}
+\begin{itemize}[leftmargin=*]
+  \item Changes to the gRPC message contract require matching updates to proto files and software architecture documentation.
+  \item Changes to register-level behavior require matching updates to the wrapper specification and register map.
+  \item Future core integration must preserve the PS-visible control semantics unless explicitly reviewed.
+\end{itemize}

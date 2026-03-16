@@ -1,0 +1,31 @@
+﻿\chapter{Detailed Throughput Model}
+
+\section*{Purpose}
+This chapter extends the basic latency model into a throughput-oriented view while keeping the PoC focus on correctness.
+
+\section{Single-Engine Throughput Approximation}
+For a single in-flight engine, approximate throughput is:
+\[
+Throughput \approx \frac{1}{T_{mmio\_setup} + T_{sign} + T_{mmio\_readback} + T_{software\_overhead}}
+\]
+
+\section{Dominant Terms}
+\begin{itemize}[leftmargin=*]
+  \item `T_{sign}` will depend on the eventual ML-DSA hardware implementation.
+  \item `T_{mmio\_readback}` scales with signature transfer volume and wrapper organization.
+  \item `T_{software\_overhead}` includes daemon scheduling, validation, and response handling.
+\end{itemize}
+
+\section{PoC Scenarios}
+\begin{longtable}{p{0.22\textwidth} p{0.68\textwidth}}
+\toprule
+Scenario & Interpretation \\
+\midrule
+Conservative & Single request at a time, explicit polling, and maximal logging for bring-up. \\
+Nominal PoC & Single request at a time with stable register access and reduced debug noise. \\
+Future optimized & Improved transport, buffering, or hardware interface beyond AXI-Lite if required. \\
+\bottomrule
+\end{longtable}
+
+\section{Guidance}
+The project should instrument these latency components early so later optimization decisions are based on measured data rather than assumptions.

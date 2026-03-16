@@ -1,0 +1,24 @@
+﻿\chapter{Basic Performance Model}
+
+\section*{Purpose}
+This chapter provides a first-order latency model for the PoC signing path.
+
+\section{Latency Decomposition}
+The end-to-end signing latency may be approximated as:
+\[
+T_{total} = T_{grpc} + T_{validation} + T_{mmio\_setup} + T_{sign} + T_{mmio\_readback} + T_{response}
+\]
+where `T_{sign}` is expected to dominate once the real hardware core is integrated.
+
+\section{PoC Interpretation}
+For the initial design, the control path is intentionally simple. This increases software overhead but reduces integration risk and improves observability during bring-up.
+
+\section{Expected Bottlenecks}
+\begin{itemize}[leftmargin=*]
+  \item AXI-Lite register programming overhead
+  \item Synchronous service behavior during the PoC
+  \item Signature readback volume relative to simple control transactions
+\end{itemize}
+
+\section{Modeling Use}
+This model is intended to guide architectural decisions and instrumentation points, not to claim final platform performance.

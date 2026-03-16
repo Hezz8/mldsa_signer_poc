@@ -1,0 +1,41 @@
+﻿\chapter{ML-DSA AXI Wrapper Specification}
+
+\section*{Purpose}
+This chapter specifies the PoC AXI-Lite wrapper that presents the hardware signing engine to Linux software.
+
+\section{Design Intent}
+The wrapper provides a narrow, deterministic control and status surface between PS software and PL logic. It remains intentionally simple so that software, simulation, and future core integration can converge on a stable contract.
+
+\section{Current Implemented Stub}
+The repository now contains a SystemVerilog wrapper stub that reflects the documented register map and control behavior. The wrapper is not connected to a real ML-DSA core; instead, it implements a deterministic fake signing path intended for interface validation.
+
+\section{Primary Functions}
+\begin{itemize}[leftmargin=*]
+  \item Accept a 64-byte digest written by software.
+  \item Expose control bits for start and clear-status behavior.
+  \item Report idle, busy, done, and error status.
+  \item Expose signature length and a read window for signature data.
+  \item Produce a deterministic fake signature for test and bring-up flows.
+\end{itemize}
+
+\section{Behavioral Model}
+The wrapper operates as a single-request engine for the current phase. Software shall not issue a new start command while the engine reports busy. A start command moves the wrapper into busy state, and after a deterministic two-cycle delay the wrapper asserts done and exposes the signature result.
+
+\section{Stub Signature Definition}
+The stub signature is defined as:
+\[
+\texttt{STUBSIG} \parallel \texttt{digest} \parallel \texttt{zero padding}
+\]
+with a fixed reported signature length of 128 bytes in the current phase.
+
+\section{Control Semantics}
+\begin{itemize}[leftmargin=*]
+  \item `start`: launches a new deterministic stub signing transaction when the wrapper is not busy.
+  \item `clear\_status`: clears done and error state, and clears the exposed signature buffer when the wrapper is idle.
+\end{itemize}
+
+\section{Error Handling}
+The wrapper currently reports an error if software attempts to start a new transaction while busy or touches an unsupported register region. This behavior is only meant to validate sequencing discipline and does not yet represent the final hardware error model.
+
+\section{Integration Note}
+The wrapper contract is intentionally independent of any specific downstream ML-DSA implementation so that the stub datapath can later be replaced without reworking the PS-visible control semantics.
