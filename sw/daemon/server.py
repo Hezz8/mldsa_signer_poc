@@ -1,4 +1,4 @@
-﻿"""Transport bindings for the pq-signature-appliance daemon skeleton."""
+"""Transport bindings for the pq-signature-appliance daemon skeleton."""
 
 from __future__ import annotations
 
@@ -6,8 +6,10 @@ import logging
 from concurrent import futures
 from dataclasses import dataclass
 
+from sw.mmio.backend import BackendError
 from sw.mmio.device import PQSignatureDevice
 from sw.mmio.fake_backend import FakeMMIOBackend
+from sw.mmio.real_backend import RealMMIOBackend
 
 from .config import DaemonConfig
 from .proto_loader import ProtoSupportError, load_proto_modules
@@ -16,6 +18,10 @@ from .service import SigningExecutionError, SigningService, SigningValidationErr
 
 class GrpcDependencyError(RuntimeError):
     """Raised when the gRPC transport cannot be started in the current environment."""
+
+
+class BackendSelectionError(RuntimeError):
+    """Raised when the configured backend cannot be created."""
 
 
 @dataclass
@@ -76,7 +82,35 @@ class GrpcSigningServer:
         self._grpc_server.wait_for_termination()
 
 
+def create_backend_from_config(config: DaemonConfig):
+    if config.backend_mode == "fake":
+        return FakeMMIOBackend()
+    if config.backend_mode == "real":
+        if config.mmio_base_addr is None:
+            raise BackendSelectionError(
+                "real backend requires PQSIG_MMIO_BASE_ADDR or --mmio-base-addr"
+            )
+        try:
+            return RealMMIOBackend(
+                base_address=config.mmio_base_addr,
+                region_size=config.mmio_region_size,
+                device_path=config.devmem_path,
+            )
+        except BackendError as exc:
+            raise BackendSelectionError(str(exc)) from exc
+    raise BackendSelectionError(f"unsupported backend mode: {config.backend_mode}")
+
+
+def create_device_from_config(config: DaemonConfig) -> PQSignatureDevice:
+    return PQSignatureDevice(create_backend_from_config(config))
+
 
 def create_default_service(config: DaemonConfig) -> SigningService:
-    device = PQSignatureDevice(FakeMMIOBackend())
-    return SigningService(device=device, timeout_s=config.timeout_s, poll_interval_s=config.poll_interval_s)
+    device = create_device_from_config(config)
+    success_status = "STUB_OK" if config.backend_mode == "fake" else "DEVICE_OK"
+    return SigningService(
+        device=device,
+        timeout_s=config.timeout_s,
+        poll_interval_s=config.poll_interval_s,
+        success_status=success_status,
+    )

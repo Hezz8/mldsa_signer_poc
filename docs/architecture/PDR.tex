@@ -17,20 +17,16 @@ The system accepts a 64-byte digest from a remote client, forwards it through a 
 \begin{itemize}[leftmargin=*]
   \item Use AXI-Lite for the initial PS and PL boundary to minimize integration complexity.
   \item Keep the external API pre-hash oriented so the service boundary is simple and deterministic.
-  \item Treat continuous signing stability as a primary PoC success metric.
-  \item Keep the wrapper contract independent from any single downstream ML-DSA implementation.
-  \item Use an explicit engine adapter layer so ML-DSA-OSH can be attached without changing the wrapper-visible contract.
-  \item Keep project-owned glue separate from the vendored third-party source tree so provenance and maintenance boundaries remain clear.
+  \item Keep the wrapper contract independent from downstream engine implementation details.
+  \item Preserve a deterministic `STUB` path for regression and first board bring-up.
+  \item Add a real MMIO backend in software without removing the fake backend used for local development.
 \end{itemize}
 
 \section{Current Implementation Boundary}
-The current implementation includes a real imported ML-DSA-OSH source snapshot and a real project-owned shim based on the inspected upstream sign path. The software contract and the wrapper-visible control and status surface remain unchanged. Deterministic `STUB` mode remains available for regression and bring-up.
+The repository now includes a real imported ML-DSA-OSH source snapshot, a project-owned hardware shim behind the adapter, and a software real-MMIO backend intended for target-board bring-up. The gRPC API, software device API, and wrapper-visible register contract remain stable.
 
 \section{What Is Verified vs Provisional}
-The wrapper contract, software path, deterministic adapter modes, and project-owned integration seam are implemented and locally verified. Full local simulation of the imported upstream sign path remains provisional because the currently available portable toolchain does not provide the mixed Verilog and VHDL elaboration flow required by the imported core.
-
-\section{PoC Boundaries}
-The proof of concept is not intended to be the final production architecture. The current design accepts higher software overhead, a temporary PoC key-provisioning model, and partial local verification limits in exchange for easier bring-up and a stable interface that future optimized implementations can preserve.
+Local software behavior, deterministic hardware wrapper behavior, and documentation consistency are verified. The software real backend is implemented and locally sanity-tested against file-backed mappings, but actual PS-to-PL communication on Zynq remains to be verified on target hardware. Full local mixed-language simulation of the imported upstream sign path also remains tooling-limited.
 
 \section{Deferred Topics}
-Deferred topics include production key management, end-to-end target-board validation, peak throughput optimization, secure boot interactions, and packaging for field deployment.
+Deferred topics include production key management, hardened device-access mechanisms, end-to-end target-board validation, peak throughput optimization, and packaging for field deployment.

@@ -1,4 +1,4 @@
-﻿"""Core signing service logic independent of the transport binding."""
+"""Core signing service logic independent of the transport binding."""
 
 from __future__ import annotations
 
@@ -30,10 +30,17 @@ class SigningResult:
 class SigningService:
     """Thin orchestration layer over the MMIO device abstraction."""
 
-    def __init__(self, device: PQSignatureDevice, timeout_s: float = 1.0, poll_interval_s: float = 0.0) -> None:
+    def __init__(
+        self,
+        device: PQSignatureDevice,
+        timeout_s: float = 1.0,
+        poll_interval_s: float = 0.0,
+        success_status: str = "STUB_OK",
+    ) -> None:
         self.device = device
         self.timeout_s = timeout_s
         self.poll_interval_s = poll_interval_s
+        self.success_status = success_status
 
     def sign_prehash(self, digest: bytes) -> SigningResult:
         self._validate_digest(digest)
@@ -48,8 +55,11 @@ class SigningService:
         return SigningResult(
             signature=signature,
             signature_length=len(signature),
-            status="STUB_OK",
+            status=self.success_status,
         )
+
+    def close(self) -> None:
+        self.device.close()
 
     @staticmethod
     def _validate_digest(digest: bytes) -> None:

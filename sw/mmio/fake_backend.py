@@ -1,4 +1,4 @@
-﻿"""Deterministic fake MMIO backend used for local execution and tests."""
+"""Deterministic fake MMIO backend used for local execution and tests."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ class FakeMMIOBackend(MMIOBackend):
 
     def reset(self) -> None:
         self._digest = bytearray(reg.DIGEST_SIZE)
-        self._signature = bytearray(reg.SIG_DATA_SIZE)
+        self._signature = bytearray(reg.SIG_WINDOW_SIZE)
         self._busy_ticks_remaining = 0
         self._done = False
         self._error = False
@@ -84,12 +84,13 @@ class FakeMMIOBackend(MMIOBackend):
         self._done = False
         self._error_code = reg.ERROR_NONE
         self._sig_length = 0
-        self._signature[:] = bytes(reg.SIG_DATA_SIZE)
+        self._signature[:] = bytes(reg.SIG_WINDOW_SIZE)
         self._busy_ticks_remaining = reg.STUB_COMPLETION_TICKS
 
     def _complete_operation(self) -> None:
         signature = reg.build_stub_signature(bytes(self._digest))
-        self._signature[:] = signature
+        self._signature[:] = bytes(reg.SIG_WINDOW_SIZE)
+        self._signature[: len(signature)] = signature
         self._sig_length = len(signature)
         self._done = True
 
@@ -99,7 +100,7 @@ class FakeMMIOBackend(MMIOBackend):
         self._error_code = reg.ERROR_NONE
         if self._busy_ticks_remaining == 0:
             self._sig_length = 0
-            self._signature[:] = bytes(reg.SIG_DATA_SIZE)
+            self._signature[:] = bytes(reg.SIG_WINDOW_SIZE)
 
     @staticmethod
     def _is_digest_offset(offset: int) -> bool:

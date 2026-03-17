@@ -1,36 +1,29 @@
-﻿\chapter{Software Architecture}
+\chapter{Software Architecture}
 
 \section*{Purpose}
-This chapter defines the baseline structure of the Linux-side software stack hosted on the Zynq PS.
+This chapter defines the current Linux-side software structure hosted on the Zynq PS.
 
-\section{Implemented Skeleton in the Current Phase}
-The repository now contains an executable software scaffold that preserves the intended system layering while keeping the signing path stubbed. The current implementation is sufficient to validate request handling, register sequencing, deterministic completion, and signature readback without requiring real PL hardware.
+\section{Current Implemented Structure}
+The repository now contains both a deterministic local development path and a target-facing real-MMIO bring-up path. The public software contract remains unchanged: the daemon accepts a 64-byte digest, sequences the MMIO device abstraction, and returns signature bytes plus status.
 
 \section{Current Components}
 \begin{itemize}[leftmargin=*]
-  \item \textbf{Service core:} a transport-independent signing service that validates a 64-byte digest and orchestrates the MMIO device interface.
-  \item \textbf{MMIO device abstraction:} a high-level device API with methods for digest writes, start, wait, readback, and clear-status behavior.
-  \item \textbf{Backend interface:} a clean seam for future replacement of the fake backend with real PS and PL MMIO access.
-  \item \textbf{Fake backend:} a deterministic local register model that emulates busy and done behavior and returns a fake signature buffer.
-  \item \textbf{Optional gRPC transport:} a runtime-generated Python gRPC binding path that can be enabled once `grpcio`, `grpcio-tools`, and `protobuf` are available.
-  \item \textbf{Local fallback harness:} an in-process execution path used for immediate tests and smoke checks in dependency-constrained environments.
+  \item \textbf{Service core:} transport-independent signing orchestration over the device abstraction.
+  \item \textbf{MMIO device abstraction:} stable software API for digest writes, start, wait, readback, and clear-status behavior.
+  \item \textbf{Fake backend:} deterministic local register model used for unit tests, local self-test, and client smoke checks.
+  \item \textbf{Real backend:} PoC user-space MMIO backend intended for Linux on Zynq, using a `/dev/mem`-style mapping path and the documented wrapper base address.
+  \item \textbf{Probe helper:} safe register-visibility check path that avoids triggering signing unless explicitly requested elsewhere.
+  \item \textbf{Optional gRPC transport:} runtime-generated Python gRPC binding path enabled when dependencies are installed.
 \end{itemize}
+
+\section{Backend Selection}
+Backend selection is configuration-driven. The default remains `fake` so local development continues to work exactly as before. The `real` backend is selected through environment variables or command-line overrides and requires platform-specific MMIO mapping inputs such as the wrapper base address.
 
 \section{Operational Model}
-The daemon receives a `SignPrehash` request, validates the 64-byte digest, clears stale status, writes the digest through the MMIO abstraction, asserts start, waits for deterministic completion, reads back the signature bytes, and returns the response. In the current phase, the software contract remains unchanged while the PL-side RTL has been refactored into a wrapper and a stable engine adapter boundary.
+In fake mode, the daemon preserves the existing deterministic stub behavior. In real mode, the daemon uses the same high-level device API but routes reads and writes through a memory-mapped access path intended for Linux on the target board. The probe path reads status-oriented registers only, while explicit self-test can drive a signing sequence when hardware is present.
 
-\section{Stub Behavior}
-The current software stack assumes the following deterministic non-cryptographic contract:
-\begin{itemize}[leftmargin=*]
-  \item input digest size is exactly 64 bytes
-  \item start transitions the backend into busy
-  \item completion occurs after a deterministic two-tick progression in the fake backend
-  \item signature length is fixed at 128 bytes
-  \item signature bytes are `STUBSIG || digest || zero padding`
-\end{itemize}
+\section{Safety Boundaries}
+The real backend is intentionally practical rather than hardened. It assumes little-endian 32-bit register access, page-aligned mapping behavior, and a correct AXI-Lite base address supplied by the platform design. Local non-target development is unaffected because the fake backend remains available and is still the default.
 
-\section{Error Model}
-The software layer distinguishes between input validation errors, dependency or transport availability errors, MMIO backend failures, hardware-reported errors, and timeout conditions. The current implementation is intentionally synchronous and single-operation oriented.
-
-\section{Design Constraints}
-The software architecture must remain compatible with a later replacement of the fake backend by real MMIO access on Zynq Linux and a later replacement of the deterministic PL-side adapter modes by the actual ML-DSA hardware integration. The gRPC API, software MMIO API, and register semantics are intentionally held stable across that transition.
+\section{Current Claim Boundary}
+The repository now contains the software infrastructure required for first PS-to-PL bring-up, but it does not yet claim that target-board register access or end-to-end signing has been validated on actual Zynq hardware.

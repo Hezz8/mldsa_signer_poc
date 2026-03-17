@@ -1,4 +1,4 @@
-﻿# Development Environment Setup
+# Development Environment Setup
 
 This repository uses a conservative setup strategy:
 
@@ -6,6 +6,7 @@ This repository uses a conservative setup strategy:
 - keep the canonical API contract in `sw/proto/signing.proto`
 - prefer `verilator` as the HDL simulator, with `iverilog` as the practical fallback
 - prefer `latexmk`, with `pdflatex` or a MiKTeX-based toolchain as the documentation fallback
+- keep target-board MMIO access behind a selectable backend so local fake-mode development remains intact
 
 ## Recommended Setup
 
@@ -36,11 +37,24 @@ With the repo-local environment:
 .\.venv\Scripts\python tools\repo_sanity_check.py
 .\.venv\Scripts\python -m sw.daemon.main selftest
 .\.venv\Scripts\python -m sw.client.client --mode local
+powershell -ExecutionPolicy Bypass -File scripts\build\run_sv_stub_tb.ps1
+powershell -ExecutionPolicy Bypass -File scripts\docs\build_docs.ps1
 ```
 
-## Optional Machine-Level Tooling
+## Target-Build Bring-Up Inputs
 
-- HDL simulation: prefer `verilator`; current practical fallback is `iverilog`
-- Documentation build: prefer `latexmk`; fallback is `pdflatex` or MiKTeX
+The new real MMIO backend is intended for Linux on Zynq and is selected with `PQSIG_BACKEND=real` or `--backend real`.
 
-Machine-level installs may require an elevated shell on this host because Chocolatey writes under `C:\ProgramData\chocolatey`.
+Useful bring-up variables:
+
+- `PQSIG_MMIO_BASE_ADDR`: physical wrapper base address, for example `0xA0000000`
+- `PQSIG_MMIO_REGION_SIZE`: mapped span in bytes, default matches the documented wrapper window
+- `PQSIG_DEVMEM_PATH`: memory device path, default `/dev/mem`
+
+First register visibility check on target hardware:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build\run_real_mmio_probe.ps1 -MmioBaseAddr 0xA0000000
+```
+
+The real-backend path is PoC bring-up infrastructure, not hardened production access.

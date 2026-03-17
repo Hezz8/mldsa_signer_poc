@@ -4,41 +4,41 @@
 This chapter defines the current verification strategy for the appliance.
 
 \section{Current Verification Goal}
-The current phase validates that the external request path, MMIO sequencing, wrapper behavior, engine-adapter behavior, and imported-core integration seam are stable enough to support later target-hardware bring-up.
+The current phase validates that the external request path, MMIO sequencing, wrapper behavior, imported-core integration seam, and software board-bring-up infrastructure are stable enough to support later target-hardware validation.
 
 \section{Verification Layers}
 \begin{longtable}{p{0.22\textwidth} p{0.68\textwidth}}
 \toprule
 Layer & Objective \\
 \midrule
-Documentation review & Confirm consistency across requirements, architecture, interfaces, planning, prompts, and imported-core inspection notes. \\
-Software unit tests & Validate request checking, fake backend state transitions, and local client or service contracts. \\
+Documentation review & Confirm consistency across requirements, architecture, interfaces, planning, prompts, and board bring-up guidance. \\
+Software unit tests & Validate request checking, fake backend behavior, backend selection, probe logic, and real-backend file-mapping sanity. \\
 Wrapper and adapter testbench & Validate reset, digest writes, start-to-busy transition, deterministic completion, signature readback, and all currently supported wrapper-visible engine modes. \\
 Imported-core inspection & Confirm that project-owned shim logic is based on the actual imported ML-DSA-OSH sign path rather than assumptions. \\
-Mixed-language real-core verification & Add full local simulation or synthesis-backed validation for the imported sign path when tooling permits. \\
-Bring-up planning & Prepare PS-to-PL and continuous-operation testing on the real platform without changing the stable wrapper contract. \\
+Real-backend bring-up & Prepare safe register-visibility and STUB-mode sequencing checks for the actual target board. \\
 \bottomrule
 \end{longtable}
 
 \section{Acceptance Focus for the Current Phase}
-The current phase is accepted primarily on interface stability, provenance clarity, inspected-core attachment correctness at the architectural level, and preservation of the existing software contract. It is explicitly not accepted on the basis of already-proven end-to-end cryptographic correctness in the current local tool flow.
+The current phase is accepted on interface stability, clear software-path separation between local and target modes, practical board-bring-up scaffolding, and preservation of the existing local development flow. It is explicitly not accepted on the basis of already-proven PS-to-PL operation on real hardware.
 
 \section{Current Test Assets}
 \begin{itemize}[leftmargin=*]
   \item Python unit tests for digest validation and fake backend state transitions
   \item Python contract tests for the local client and service path
+  \item Python tests for backend selection, probe behavior, and file-backed real-backend sanity
   \item A SystemVerilog wrapper testbench that covers `STUB`, `CORE\_PLACEHOLDER`, and the documented `MLDSA\_OSH` fallback behavior
   \item Imported-core inspection notes tied to the actual upstream source files
 \end{itemize}
 
 \section{Current Limits}
-The imported upstream sign path mixes Verilog and VHDL. The current portable local environment does not provide mixed-language elaboration, so full real-core local simulation is still pending. This limitation shall be tracked explicitly rather than hidden behind placeholder success cases.
+The imported upstream sign path still requires stronger mixed-language validation than the local portable toolchain currently provides. In addition, the real MMIO backend has been implemented for target bring-up but has not yet been exercised against an actual Zynq board in this phase.
 
 \section{Key Exit Criteria}
 \begin{itemize}[leftmargin=*]
   \item Documented registers and control bits are implemented consistently in software and the wrapper.
   \item Deterministic `STUB` mode remains simulation-backed for regression.
-  \item The `MLDSA\_OSH` adapter and shim path is documented against the real imported sign interface.
-  \item The software execution path runs without real hardware.
-  \item The repository is ready for a follow-on phase that adds real PS or PL bring-up and stronger verification of the imported sign path.
+  \item The software stack can select `fake` or `real` backend modes without API churn.
+  \item A safe probe path exists for future target-board register visibility checks.
+  \item The repository is ready for a follow-on phase that performs actual PS-to-PL bring-up on hardware.
 \end{itemize}

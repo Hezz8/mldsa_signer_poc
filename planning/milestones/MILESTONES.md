@@ -34,14 +34,22 @@
 - Wrapper contract and software behavior preserved
 - Local verification explicitly split between deterministic wrapper regression and future mixed-language real-core verification
 
-## M5: Real PS/PL Bring-Up
+## M5: Real MMIO Backend And Bring-Up Scaffolding
+
+- Software MMIO layer supports both `fake` and `real` backends
+- Real backend supports practical Linux user-space MMIO mapping for target bring-up
+- Safe MMIO probe path exists for future register visibility checks on Zynq
+- Local software tests still pass without hardware
+- Board bring-up guidance now starts with `STUB` mode before `MLDSA_OSH` mode
+
+## M6: Real PS-PL Bring-Up
 
 - PS software communicates with PL registers on target hardware
-- End-to-end path exercised using the stable wrapper interface
-- Optional real MMIO backend added without removing the fake backend
-- Continuous signing loop infrastructure available on the target platform
+- End-to-end path is exercised using the stable wrapper interface
+- STUB-mode sequencing is verified on the actual board
+- MLDSA_OSH bring-up risks are reduced with real register visibility data
 
-## M6: PoC Review
+## M7: PoC Review
 
 - Correctness demonstrated within the verified scope
 - Continuous signing soak results documented

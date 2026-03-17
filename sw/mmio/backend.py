@@ -1,4 +1,4 @@
-﻿"""Backend abstraction for memory-mapped register access."""
+"""Backend abstraction for memory-mapped register access."""
 
 from __future__ import annotations
 
@@ -19,6 +19,9 @@ class MMIOBackend(ABC):
     @abstractmethod
     def write32(self, offset: int, value: int) -> None:
         raise NotImplementedError
+
+    def flush(self) -> None:
+        """Ensure writes are visible to downstream hardware when applicable."""
 
     def tick(self) -> None:
         """Advance backend time for polling-oriented tests.

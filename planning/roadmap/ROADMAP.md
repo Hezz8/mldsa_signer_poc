@@ -6,40 +6,38 @@ Establish a credible engineering path from repository bootstrap to a working pro
 
 ## Current Phase
 
-The repository is in the imported-core integration phase. The external API, register map base layout, software sequencing, and wrapper behavior remain stable. ML-DSA-OSH source is now imported under `hw/ip/mldsa_osh/`, and the PL-side architecture includes a real adapter and shim path for ML-DSA-87 signing. Full local simulation of the imported sign path remains constrained by mixed-language tooling availability.
+The repository is in the real-MMIO and board-bring-up preparation phase. The external API, register map base layout, software sequencing, and wrapper behavior remain stable. ML-DSA-OSH source is already imported behind the hardware adapter, and software now includes a target-facing real backend while still preserving the local fake backend.
 
 ## Workstreams
 
 ### 1. System definition
 
 - Keep the external signing service contract stable
-- Keep the PS/PL register and control protocol synchronized across docs and code
+- Keep the PS-PL register and control protocol synchronized across docs and code
 - Capture non-functional expectations for reliability and maintainability
 
 ### 2. Software platform
 
 - Maintain the transport-independent service core and MMIO device layer
-- Keep the optional gRPC binding path aligned with the canonical proto
-- Preserve the fake backend while adding a future real MMIO backend only when the target bring-up phase starts
+- Keep the fake backend as the default local development path
+- Use the new real backend for target-board bring-up without changing the public software API
 
 ### 3. Hardware platform
 
 - Keep the AXI-Lite wrapper contract stable
 - Keep the engine adapter as the only intended attachment point for ML-DSA-OSH integration
-- Keep project-owned shim logic separate from the vendored third-party source
-- Preserve `STUB` mode while the real core path matures
+- Preserve `STUB` mode as the first real-board bring-up target
 
 ### 4. Verification and performance
 
 - Maintain unit, simulation, integration, and end-to-end verification layers
 - Separate deterministic wrapper regression from real imported-core verification
-- Continue refining realistic throughput and latency models
-- Prepare continuous signing and stability campaigns on hardware
+- Add target-board register visibility and sequencing checks incrementally
 
 ### 5. Security hardening
 
 - Replace PoC static key handling with a production-grade key-management approach later
-- Review privilege boundaries and operational controls
+- Replace PoC MMIO access mechanisms with a more controlled deployment approach later
 - Add robustness features for malformed input and fault handling
 
 ## Sequencing
@@ -71,15 +69,20 @@ The repository is in the imported-core integration phase. The external API, regi
 - ML-DSA-OSH source is imported with provenance recorded
 - The adapter gains a real `MLDSA_OSH` mode through project-owned shim logic
 - Wrapper semantics and software behavior remain stable
-- Local verification remains limited to deterministic wrapper regression plus honest fallback checks until mixed-language simulation or synthesis-backed validation is available
 
-### Phase F: Real bring-up
+### Phase F: Real MMIO scaffolding
 
-- Replace the fake backend with real MMIO access on target hardware while preserving the software API
-- Exercise PS and PL sequencing against the stable wrapper implementation
-- Validate the imported-core path on actual target hardware or a stronger mixed-language verification flow
+- Software gains a practical target-facing MMIO backend
+- A safe probe path is available for first PS-to-PL register visibility checks
+- Local development remains on the fake backend by default
 
-### Phase G: Refinement
+### Phase G: Real bring-up
+
+- Exercise PS and PL sequencing against the stable wrapper implementation on actual hardware
+- Start with `STUB` mode on target before attempting `MLDSA_OSH` mode
+- Validate the imported-core path on actual target hardware or a stronger verification flow
+
+### Phase H: Refinement
 
 - Throughput optimization
 - Security posture improvement

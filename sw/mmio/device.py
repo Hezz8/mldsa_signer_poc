@@ -1,4 +1,4 @@
-﻿"""High-level MMIO device abstraction used by the daemon."""
+"""High-level MMIO device abstraction used by the daemon."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ class DeviceTimeoutError(DeviceError):
 
 
 class PQSignatureDevice:
-    """High-level interface for the stubbed PQ signature appliance registers."""
+    """High-level interface for the PQ signature appliance registers."""
 
     def __init__(self, backend: MMIOBackend) -> None:
         self.backend = backend
@@ -28,23 +28,34 @@ class PQSignatureDevice:
         for index in range(reg.DIGEST_WORDS):
             chunk = digest[index * 4 : (index + 1) * 4]
             self.backend.write32(reg.digest_offset(index), int.from_bytes(chunk, "little"))
+        self.backend.flush()
 
     def start_operation(self) -> None:
         self.backend.write32(reg.CONTROL, reg.CONTROL_START_MASK)
+        self.backend.flush()
 
     def clear_status(self) -> None:
         self.backend.write32(reg.CONTROL, reg.CONTROL_CLEAR_STATUS_MASK)
+        self.backend.flush()
 
     def read_status(self) -> int:
         return self.backend.read32(reg.STATUS)
+
+    def read_error_code(self) -> int:
+        return self.backend.read32(reg.ERROR_CODE)
+
+    def read_signature_length(self) -> int:
+        return self.backend.read32(reg.SIG_LENGTH)
 
     def wait_done(self, timeout_s: float, poll_interval_s: float = 0.0) -> None:
         deadline = time.monotonic() + timeout_s
         while True:
             status = self.read_status()
             if status & reg.STATUS_ERROR_MASK:
-                error_code = self.backend.read32(reg.ERROR_CODE)
-                raise DeviceError(f"device reported error code {error_code}")
+                error_code = self.read_error_code()
+                raise DeviceError(
+                    f"device reported error code {error_code} ({reg.decode_error_code(error_code)})"
+                )
             if status & reg.STATUS_DONE_MASK:
                 return
             if time.monotonic() >= deadline:
@@ -54,13 +65,13 @@ class PQSignatureDevice:
                 time.sleep(poll_interval_s)
 
     def read_signature(self) -> bytes:
-        sig_length = self.backend.read32(reg.SIG_LENGTH)
+        sig_length = self.read_signature_length()
         if sig_length <= 0:
             raise DeviceError("signature length is zero; operation is not complete")
-        if sig_length > reg.SIG_DATA_SIZE:
-            raise DeviceError(f"signature length {sig_length} exceeds stub buffer size")
+        if sig_length > reg.SIG_WINDOW_SIZE:
+            raise DeviceError(f"signature length {sig_length} exceeds readable signature window")
         output = bytearray()
-        for index in range((sig_length + 3) // 4):
+        for index in range(reg.sig_data_words_for_length(sig_length)):
             output.extend(self.backend.read32(reg.sig_data_offset(index)).to_bytes(4, "little"))
         return bytes(output[:sig_length])
 
