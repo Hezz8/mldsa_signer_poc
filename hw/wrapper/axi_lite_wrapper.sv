@@ -26,13 +26,13 @@ module axi_lite_wrapper #(
   import wrapper_pkg::*;
 
   logic [7:0] digest_bytes [0:DIGEST_BYTES-1];
-  logic [7:0] signature_bytes [0:SIG_BYTES-1];
+  logic [7:0] signature_bytes [0:MAX_SIGNATURE_BYTES-1];
   logic [DIGEST_BITS-1:0] digest_vector;
   logic engine_busy;
   logic engine_done;
   logic engine_error;
   logic [31:0] engine_signature_length;
-  logic [SIG_BITS-1:0] engine_signature_buffer;
+  logic [MAX_SIGNATURE_BITS-1:0] engine_signature_buffer;
   logic operation_inflight_reg;
   logic done_reg;
   logic error_reg;
@@ -100,7 +100,7 @@ module axi_lite_wrapper #(
               digest_bytes[index * 4 + 2],
               digest_bytes[index * 4 + 3]
             );
-          end else if ((addr >= SIG_DATA_BASE_ADDR) && (addr < SIG_DATA_BASE_ADDR + (SIG_WORDS * 4))) begin
+          end else if ((addr >= SIG_DATA_BASE_ADDR) && (addr < SIG_DATA_BASE_ADDR + (SIG_WINDOW_WORDS * 4))) begin
             index = (addr - SIG_DATA_BASE_ADDR) >> 2;
             read_word = pack_bytes(
               signature_bytes[index * 4],
@@ -127,7 +127,7 @@ module axi_lite_wrapper #(
       for (i = 0; i < DIGEST_BYTES; i = i + 1) begin
         digest_bytes[i] <= 8'h00;
       end
-      for (i = 0; i < SIG_BYTES; i = i + 1) begin
+      for (i = 0; i < MAX_SIGNATURE_BYTES; i = i + 1) begin
         signature_bytes[i] <= 8'h00;
       end
     end else begin
@@ -144,7 +144,7 @@ module axi_lite_wrapper #(
         error_reg <= 1'b0;
         error_code_reg <= ERROR_NONE;
         sig_length_reg <= engine_signature_length;
-        for (i = 0; i < SIG_BYTES; i = i + 1) begin
+        for (i = 0; i < MAX_SIGNATURE_BYTES; i = i + 1) begin
           signature_bytes[i] <= engine_signature_buffer[(i * 8) +: 8];
         end
       end
@@ -166,7 +166,7 @@ module axi_lite_wrapper #(
               error_code_reg <= ERROR_NONE;
               if (!operation_inflight_reg) begin
                 sig_length_reg <= 32'h0;
-                for (i = 0; i < SIG_BYTES; i = i + 1) begin
+                for (i = 0; i < MAX_SIGNATURE_BYTES; i = i + 1) begin
                   signature_bytes[i] <= 8'h00;
                 end
               end
@@ -182,7 +182,7 @@ module axi_lite_wrapper #(
                 done_reg <= 1'b0;
                 error_code_reg <= ERROR_NONE;
                 sig_length_reg <= 32'h0;
-                for (i = 0; i < SIG_BYTES; i = i + 1) begin
+                for (i = 0; i < MAX_SIGNATURE_BYTES; i = i + 1) begin
                   signature_bytes[i] <= 8'h00;
                 end
               end

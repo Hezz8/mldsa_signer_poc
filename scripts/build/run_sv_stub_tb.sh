@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -13,8 +13,11 @@ fi
 mkdir -p "$BUILD_DIR"
 export PATH="$OSS_CAD_ROOT/bin:$OSS_CAD_ROOT/lib:$PATH"
 
+cd "$ROOT_DIR"
+
 iverilog -g2012 -s tb_axi_lite_wrapper -o "$BUILD_DIR/tb_axi_lite_wrapper.vvp" \
   "$ROOT_DIR/hw/wrapper/wrapper_pkg.sv" \
+  "$ROOT_DIR/hw/rtl/mldsa_osh_shim.sv" \
   "$ROOT_DIR/hw/rtl/mldsa_engine_adapter.sv" \
   "$ROOT_DIR/hw/wrapper/axi_lite_wrapper.sv" \
   "$ROOT_DIR/hw/tb/tb_axi_lite_wrapper.sv"

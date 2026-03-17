@@ -1,4 +1,4 @@
-﻿\chapter{Hardware Microarchitecture}
+\chapter{Hardware Microarchitecture}
 
 \section*{Purpose}
 This chapter describes the current PL-side organization at a level suitable for integration planning and early verification.
@@ -7,25 +7,33 @@ This chapter describes the current PL-side organization at a level suitable for 
 \begin{itemize}[leftmargin=*]
   \item \textbf{AXI-Lite wrapper:} register decode, digest staging, command acceptance, status reporting, and signature readback windows.
   \item \textbf{ML-DSA engine adapter:} stable internal boundary that accepts wrapper-level start and digest inputs and returns busy, done, error, signature length, and signature data.
-  \item \textbf{Future ML-DSA core attachment point:} reserved seam where ML-DSA-OSH-specific control, buffering, and datapath signals will attach later.
+  \item \textbf{ML-DSA-OSH shim:} project-owned stream adapter that formats the appliance digest input, partitions PoC key material, sequences the imported sign transaction, and reorders signature output for the wrapper-visible buffer.
+  \item \textbf{Imported ML-DSA-OSH core path:} vendored third-party sign implementation under `hw/ip/mldsa\_osh/upstream/`.
   \item \textbf{Signature buffer exposure:} wrapper-visible byte window populated from adapter output once an operation completes.
 \end{itemize}
 
 \section{Current Adapter Modes}
-The current adapter supports two deterministic non-cryptographic modes:
+The adapter supports three modes:
 \begin{itemize}[leftmargin=*]
-  \item \textbf{STUB mode:} reproduces the existing fake-signature behavior used to validate wrapper sequencing and software integration.
-  \item \textbf{CORE\_PLACEHOLDER mode:} preserves the same adapter contract while standing in for a future ML-DSA-OSH-facing engine implementation.
+  \item \textbf{STUB mode:} deterministic fake-signature behavior used to validate wrapper sequencing and software integration.
+  \item \textbf{CORE\_PLACEHOLDER mode:} deterministic seam-testing mode that preserves the same adapter contract while standing in for downstream core attachment.
+  \item \textbf{MLDSA\_OSH mode:} real attachment path that instantiates project-owned shim logic for the imported ML-DSA-OSH sign interface.
 \end{itemize}
 
 \section{Clocking and Reset}
-The initial implementation assumes a single primary PL clock domain for the wrapper and adapter path. Reset behavior forces the wrapper into an idle, non-busy state with cleared status and an empty signature window.
+The initial implementation assumes a single primary PL clock domain for the wrapper and adapter path. Reset behavior forces the wrapper into an idle, non-busy state with cleared status and an empty signature window. The ML-DSA-OSH shim additionally applies a short internal reset sequence before launching the upstream sign operation.
 
-\section{Dataflow}
-Software writes the digest into wrapper-visible registers, asserts `start`, the wrapper launches the engine adapter, and the adapter later reports completion with a signature buffer and signature length. The wrapper then exposes the result through the PS-readable `SIG\_LENGTH` and `SIG\_DATA` windows.
+\section{Current Dataflow}
+Software writes the digest into wrapper-visible registers and asserts `start`. The wrapper launches the adapter. In `STUB` and `CORE\_PLACEHOLDER` modes, the adapter returns a deterministic local result. In `MLDSA\_OSH` mode, the shim converts the digest-oriented appliance request into the inspected upstream sign stream, captures the real core output stream, and reorders it into the wrapper-visible signature buffer.
+
+\section{Digest Adaptation}
+The appliance boundary remains digest-oriented, while the inspected upstream sign path expects formatted message bytes. The current shim therefore uses a provisional PoC adaptation that emits `0x00 || 0x00 || digest[63:0]` as the formatted message payload and provides `mlen = 64`. This assumption is isolated inside project-owned shim logic and documented explicitly so it can be revisited later without changing the wrapper or software interface.
+
+\section{Signature Buffering}
+The deterministic modes still report 128-byte signatures. The real ML-DSA-87 path uses a 4627-byte signature. To keep the wrapper contract stable while supporting the real path, the `SIG\_DATA` window has been compatibly sized for the largest supported result. The `SIG\_LENGTH` register continues to report the actual valid byte count for the selected engine mode.
 
 \section{Adapter Rationale}
-The adapter prevents the AXI-Lite wrapper from depending directly on ML-DSA-OSH-specific handshake or datapath details. This allows the PS-visible contract to remain stable while the downstream engine implementation evolves from deterministic scaffolding to a real hardware core.
+The adapter prevents the AXI-Lite wrapper from depending directly on ML-DSA-OSH-specific handshake, key-segment ordering, or output-stream ordering details. This allows the PS-visible contract to remain stable while the downstream engine implementation evolves from deterministic scaffolding to a real hardware core.
 
-\section{Microarchitecture Constraints}
-The microarchitecture shall support repeated signing requests without requiring PL reconfiguration or manual state cleanup between successful transactions. The wrapper contract shall remain stable across the upcoming transition from `CORE\_PLACEHOLDER` to real ML-DSA integration.
+\section{Current Verification Constraint}
+The imported ML-DSA-OSH sign path mixes Verilog and VHDL sources. The current local portable toolchain is sufficient for wrapper-level regression and for honest testing of the ML-DSA-OSH fallback behavior, but not for full local simulation of the mixed-language imported sign path. That limitation is tooling-related rather than an architectural decision.

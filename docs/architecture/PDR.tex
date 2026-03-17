@@ -1,4 +1,4 @@
-﻿\chapter{Preliminary Design Review}
+\chapter{Preliminary Design Review}
 
 \section*{Purpose}
 This chapter captures the current architectural direction for the proof-of-concept appliance.
@@ -10,7 +10,7 @@ The system accepts a 64-byte digest from a remote client, forwards it through a 
 \begin{itemize}[leftmargin=*]
   \item \textbf{Client side:} submits signing requests over Ethernet.
   \item \textbf{PS software:} runs Linux, hosts the gRPC daemon, validates requests, manages MMIO, and reports status.
-  \item \textbf{PL logic:} hosts the stable AXI-Lite wrapper, the ML-DSA engine adapter, and the future signing datapath.
+  \item \textbf{PL logic:} hosts the stable AXI-Lite wrapper, the ML-DSA engine adapter, project-owned ML-DSA-OSH shim logic, and the imported signing datapath.
 \end{itemize}
 
 \section{Key Architectural Choices}
@@ -19,14 +19,18 @@ The system accepts a 64-byte digest from a remote client, forwards it through a 
   \item Keep the external API pre-hash oriented so the service boundary is simple and deterministic.
   \item Treat continuous signing stability as a primary PoC success metric.
   \item Keep the wrapper contract independent from any single downstream ML-DSA implementation.
-  \item Introduce an explicit engine adapter layer so ML-DSA-OSH can be attached later without changing the wrapper-visible contract.
+  \item Use an explicit engine adapter layer so ML-DSA-OSH can be attached without changing the wrapper-visible contract.
+  \item Keep project-owned glue separate from the vendored third-party source tree so provenance and maintenance boundaries remain clear.
 \end{itemize}
 
 \section{Current Implementation Boundary}
-The current implementation remains intentionally non-cryptographic. The wrapper and engine adapter are real RTL scaffolding, while the adapter modes are deterministic placeholders used to validate sequencing, register stability, and future integration seams.
+The current implementation includes a real imported ML-DSA-OSH source snapshot and a real project-owned shim based on the inspected upstream sign path. The software contract and the wrapper-visible control and status surface remain unchanged. Deterministic `STUB` mode remains available for regression and bring-up.
+
+\section{What Is Verified vs Provisional}
+The wrapper contract, software path, deterministic adapter modes, and project-owned integration seam are implemented and locally verified. Full local simulation of the imported upstream sign path remains provisional because the currently available portable toolchain does not provide the mixed Verilog and VHDL elaboration flow required by the imported core.
 
 \section{PoC Boundaries}
-The proof of concept is not intended to be the final production architecture. The initial design accepts higher software overhead in exchange for easier bring-up, straightforward verification, and a stable interface that future optimized implementations can preserve.
+The proof of concept is not intended to be the final production architecture. The current design accepts higher software overhead, a temporary PoC key-provisioning model, and partial local verification limits in exchange for easier bring-up and a stable interface that future optimized implementations can preserve.
 
 \section{Deferred Topics}
-Deferred topics include real ML-DSA-OSH integration, key management hardening, peak throughput optimization, secure boot interactions, and packaging for field deployment.
+Deferred topics include production key management, end-to-end target-board validation, peak throughput optimization, secure boot interactions, and packaging for field deployment.

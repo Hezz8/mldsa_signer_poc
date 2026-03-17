@@ -1,8 +1,8 @@
-﻿# pq-signature-appliance
+# pq-signature-appliance
 
-`pq-signature-appliance` is a hardware/software co-design project for a post-quantum digital signature appliance built around ML-DSA-87 on a Xilinx/AMD Zynq UltraScale+ platform. The long-term goal is a network-accessible signing appliance that accepts a 64-byte pre-hash digest over gRPC, transfers the request from Linux running on the processing system (PS) into programmable logic (PL), and returns an ML-DSA signature produced by a dedicated hardware signing core.
+`pq-signature-appliance` is a hardware/software co-design project for a post-quantum digital signature appliance built around ML-DSA-87 on a Xilinx/AMD Zynq UltraScale+ platform. The long-term goal is a network-accessible signing appliance that accepts a 64-byte pre-hash digest over gRPC, transfers the request from Linux running on the processing system (PS) into programmable logic (PL), and returns an ML-DSA signature produced by dedicated hardware.
 
-The repository now includes an executable system skeleton plus a stable hardware engine adapter boundary. The current implementation is still intentionally non-cryptographic: it exercises the external request path, MMIO sequencing, register behavior, wrapper behavior, and signature readback without integrating any real ML-DSA cryptographic implementation.
+The repository now includes the first real third-party hardware-core integration phase. ML-DSA-OSH source has been imported under `hw/ip/mldsa_osh/`, and the PL architecture now supports a real engine path behind the existing adapter boundary. The software contract, register map base layout, and wrapper-visible behavior remain stable.
 
 ## Architecture Summary
 
@@ -12,53 +12,56 @@ The proof-of-concept architecture remains a layered HW/SW design:
 2. A gRPC daemon on Linux running on the Zynq UltraScale+ PS validates and marshals the request.
 3. The daemon writes the request into an AXI-Lite accessible wrapper connected to the PL.
 4. The wrapper delegates the request to a generic ML-DSA engine adapter.
-5. The current adapter produces a deterministic fake signature instead of invoking a real ML-DSA core.
-6. The PS collects completion status and signature data, then returns the result through gRPC or a local fallback harness.
+5. The adapter selects one of three engine modes:
+   - `STUB`
+   - `CORE_PLACEHOLDER`
+   - `MLDSA_OSH`
+6. The PS collects completion status and signature data, then returns the result through gRPC or the local fallback harness.
 
-For the initial proof of concept, the focus is correctness, deterministic interfaces, and continuous signing operation. Peak throughput optimization is explicitly deferred.
+For the initial proof of concept, the focus remains correctness, deterministic interfaces, bring-up practicality, and continuous signing operation. Peak throughput optimization is explicitly deferred.
 
-## Current Executable Skeleton
+## Current Hardware Boundary
 
-The repository now includes:
+The current PL-side architecture is organized as:
 
-- a Python MMIO abstraction with a backend interface and deterministic fake backend
-- a transport-independent signing service layer
-- an optional gRPC server/client path that is ready for real bindings once `grpcio`, `grpcio-tools`, and `protobuf` are installed
-- a dependency-free local self-test and local client path for immediate execution in constrained environments
-- a stable SystemVerilog AXI-Lite wrapper, an engine adapter layer, and a matching testbench
-- Python unit and contract tests that do not require target hardware
+`AXI-Lite wrapper -> mldsa_engine_adapter -> selected engine path`
 
-## Stable Hardware Boundary
+For the real-core path, the selected engine path is currently:
 
-The current PL-side architecture is now organized as:
+`AXI-Lite wrapper -> mldsa_engine_adapter -> mldsa_osh_shim -> imported ML-DSA-OSH sign path`
 
-`AXI-Lite wrapper -> ML-DSA engine adapter -> future ML-DSA-OSH core`
+The wrapper remains the PS-visible contract boundary. The adapter and shim isolate wrapper-visible control and register semantics from ML-DSA-OSH-specific stream ordering, key segmentation, output ordering, and future implementation churn.
 
-The wrapper remains the PS-visible contract boundary. The adapter isolates wrapper-visible control and register semantics from future ML-DSA-OSH-specific handshakes, datapath organization, and completion details.
+## Current Engine Modes
 
-Current adapter modes:
+- `STUB`: deterministic fake signature used for software regression and wrapper contract testing.
+- `CORE_PLACEHOLDER`: deterministic non-cryptographic seam-testing mode.
+- `MLDSA_OSH`: real attachment path to the imported ML-DSA-OSH source through a project-owned shim.
 
-- `STUB`: reproduces the deterministic fake signature behavior already used by software and tests.
-- `CORE_PLACEHOLDER`: preserves the same adapter contract while reserving the seam where a real ML-DSA-OSH core will attach in the next phase.
+## Exact STUB Behavior
 
-## Deterministic Stub Behavior
-
-The current `STUB` signing path is deliberately deterministic and non-cryptographic:
+The `STUB` path is deliberately deterministic and non-cryptographic:
 
 - input must be exactly 64 bytes
 - `start` transitions the device to `busy`
-- after a deterministic two-tick or two-cycle delay, the device transitions to `done`
-- the reported signature length is fixed at 128 bytes in the current stub phase
-- the fake signature bytes are `STUBSIG || digest || zero padding` truncated or padded to 128 bytes
+- after a deterministic two-cycle delay, the device transitions to `done`
+- the reported signature length is fixed at 128 bytes
+- the fake signature bytes are `STUBSIG || digest || zero padding`, truncated or padded to 128 bytes
 
-The `CORE_PLACEHOLDER` adapter mode is also deterministic and non-cryptographic:
+## Current MLDSA_OSH Path Status
 
-- it preserves the same wrapper-visible control and status contract
-- it completes after a deterministic four-cycle delay
-- it reports a fixed signature length of 128 bytes
-- it exposes `COREPH || digest || zero padding` as a placeholder result for adapter-mode verification
+The repository now contains a real imported ML-DSA-OSH source snapshot and a real project-owned shim based on the inspected upstream sign interface. That integration is real in the sense that:
 
-This behavior exists only to validate interfaces, register sequencing, software orchestration, and test infrastructure.
+- the upstream source is present in the repository with provenance recorded
+- the adapter exposes a real `MLDSA_OSH` mode
+- the project-owned shim sequences the inspected upstream sign input order and reorders the output stream into the wrapper-visible signature buffer
+- PoC-only static key material is isolated in a dedicated include file and documented as temporary
+
+However, the current local portable simulation flow cannot fully elaborate the imported sign path because the upstream implementation mixes Verilog and VHDL, while the current user-space toolchain does not include `ghdl` or another mixed-language elaboration flow. For that reason:
+
+- `STUB` and `CORE_PLACEHOLDER` remain the deterministic regression path
+- the local wrapper testbench also exercises the honest `MLDSA_OSH` fallback behavior that reports engine error when the real mixed-language core is not compiled in
+- full local cryptographic correctness is not yet claimed
 
 ## Planned HW/SW Stack
 
@@ -67,16 +70,17 @@ This behavior exists only to validate interfaces, register sequencing, software 
 - Network service: gRPC signing daemon over Ethernet
 - PS/PL boundary: AXI-Lite control and status wrapper
 - Hardware accelerator boundary: stable ML-DSA engine adapter inside PL
-- Hardware accelerator target: future ML-DSA-87 signing core in PL
-- PoC key strategy: provisioned or hardcoded key material in PL for bring-up only, not implemented yet
+- Real hardware accelerator basis: imported ML-DSA-OSH sign path adapted for ML-DSA-87 PoC integration
+- PoC key strategy: static secret-key image for controlled bring-up only, explicitly non-production
 
 ## Project Status
 
-- Executable stub skeleton for sequencing and interface validation
-- Stable wrapper-to-engine adapter boundary added for future ML-DSA-OSH integration
-- Architecture, requirements, interface, verification, and performance baselines remain authoritative
-- Repository conventions established for iterative work with Codex and multiple agents
-- No external IP or crypto implementation integrated yet
+- Executable software skeleton remains working and unchanged at the public API level
+- Stable wrapper-to-engine adapter boundary remains intact
+- ML-DSA-OSH source is imported under `hw/ip/mldsa_osh/`
+- Project-owned RTL shim translates the stable adapter contract to the inspected upstream sign-stream interface
+- Documentation, planning, and verification collateral have been updated for the imported-core phase
+- Full local mixed-language simulation of the real upstream sign path is still blocked by tooling availability
 
 ## Project Phases
 
@@ -84,8 +88,8 @@ This behavior exists only to validate interfaces, register sequencing, software 
 2. Interface freezing and wrapper definition
 3. Executable stub implementation for software and hardware sequencing validation
 4. Hardware adapter stabilization for future core integration
-5. Real PS and PL bring-up on target hardware
-6. ML-DSA core integration and bring-up
+5. Real ML-DSA-OSH attachment behind the engine adapter
+6. PS-to-real-wrapper MMIO backend and target-board bring-up
 7. System integration, verification, and performance refinement
 8. Security hardening, operationalization, and production readiness review
 
@@ -111,7 +115,7 @@ This behavior exists only to validate interfaces, register sequencing, software 
 Key areas:
 
 - `docs/`: LaTeX documentation package for requirements, architecture, interfaces, verification, and performance
-- `hw/`: wrapper, engine adapter, simulation, and testbench collateral
+- `hw/`: wrapper, engine adapter, ML-DSA-OSH integration glue, imported IP, simulation, and testbench collateral
 - `sw/`: daemon, MMIO abstraction, client, proto contract, and tests
 - `planning/`: roadmap, milestones, architectural decisions, and risk register
 - `prompts/`: implementation and bring-up prompt scaffolding for later phases
@@ -119,21 +123,23 @@ Key areas:
 
 ## How Future Work Will Be Organized
 
-Major design choices should still be captured in planning decisions before substantial implementation changes. Architecture-affecting changes must update the corresponding LaTeX documents, interface specifications, and rule files in the same workstream. Hardware, software, and verification work are intentionally separated so multiple contributors or agents can progress in parallel while preserving a common system contract.
+Major design choices should still be captured in planning decisions before substantial implementation changes. Architecture-affecting changes must update the corresponding LaTeX documents, inspection notes, and interface specifications in the same workstream.
 
 Near-term implementation work should proceed in this order:
 
-1. Keep the proto, register map, wrapper contract, adapter contract, and software MMIO source of truth aligned.
-2. Replace the fake backend with real PS/PL access on the target platform while preserving the software API.
-3. Attach the future ML-DSA-OSH core behind the engine adapter without changing the wrapper-visible contract.
-4. Expand verification from deterministic adapter modes into real core integration checks.
+1. Keep the proto, software MMIO API, wrapper contract, and register map stable.
+2. Preserve `STUB` mode as the deterministic regression and bring-up path.
+3. Add a real Linux MMIO backend for target hardware while keeping the fake backend intact.
+4. Complete mixed-language verification or synthesis-backed validation of the imported ML-DSA-OSH path.
+5. Bring the real wrapper and real engine path up on Zynq UltraScale+ hardware.
 
 ## Important Phase Boundaries
 
-- No actual ML-DSA implementation is present yet.
-- No external repository, vendor IP drop, or generated hardware project has been integrated.
-- The current signing behavior is deterministic scaffolding, not cryptography.
-- The gRPC transport binding is dependency-gated in the current environment; the local execution path remains available immediately.
-- The wrapper contract, MMIO abstraction, and gRPC API are intended to remain stable while hardware internals change.
+- The external gRPC API has not changed.
+- The public Python software behavior has not changed.
+- The wrapper base register layout remains stable.
+- The `SIG_DATA` window has been compatibly extended to cover the largest supported engine result so the real ML-DSA-87 signature can be surfaced without introducing a new software-visible register bank.
+- `STUB` mode remains the deterministic regression path.
+- The imported ML-DSA-OSH path is integrated behind the adapter, but full local cryptographic correctness is not yet claimed in the current portable tool flow.
 
-This repository should be treated as the authoritative engineering baseline for the adapter-stabilization phase leading into real ML-DSA hardware integration.
+This repository should now be treated as the authoritative engineering baseline for the imported-core integration phase leading into real PS/PL bring-up on target hardware.

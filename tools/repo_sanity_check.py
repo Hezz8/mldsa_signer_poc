@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 import sys
@@ -8,6 +8,9 @@ REQUIRED_DIRECTORIES = [
     "docs",
     "docs/architecture",
     "docs/interfaces",
+    "docs/reviews",
+    "hw/include",
+    "hw/ip/mldsa_osh",
     "hw/rtl",
     "hw/wrapper",
     "hw/tb",
@@ -27,8 +30,15 @@ REQUIRED_FILES = [
     "docs/architecture/Software_Architecture.tex",
     "docs/architecture/Wrapper_Spec.tex",
     "docs/architecture/MLDSA_OSH_Integration_Guide.tex",
+    "docs/architecture/MLDSA_Key_Provisioning_PoC.tex",
+    "docs/architecture/MLDSA_OSH_Inspection_Notes.md",
     "docs/interfaces/Register_Map.tex",
+    "docs/verification/Verification_Plan.tex",
+    "hw/include/mldsa_osh_poc_sk_87.mem",
+    "hw/include/README.md",
+    "hw/ip/mldsa_osh/README.md",
     "hw/rtl/mldsa_engine_adapter.sv",
+    "hw/rtl/mldsa_osh_shim.sv",
     "hw/wrapper/axi_lite_wrapper.sv",
     "hw/wrapper/wrapper_pkg.sv",
     "hw/tb/tb_axi_lite_wrapper.sv",
@@ -44,6 +54,7 @@ REQUIRED_FILES = [
     "sw/tests/test_client_server_contract.py",
     "scripts/build/run_python_tests.sh",
     "scripts/build/run_sv_stub_tb.ps1",
+    "scripts/build/run_sv_mldsa_osh_tb.ps1",
     "sw/proto/signing.proto",
 ]
 

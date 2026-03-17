@@ -1,4 +1,4 @@
-﻿# Milestones
+# Milestones
 
 ## M0: Repository Bootstrap
 
@@ -26,20 +26,23 @@
 - `STUB` and `CORE_PLACEHOLDER` adapter modes verified in simulation
 - Software contracts preserved while hardware internals gain a clean integration seam
 
-## M4: Real PS/PL Bring-Up
+## M4: ML-DSA-OSH Core Attachment
+
+- ML-DSA-OSH source imported into `hw/ip/mldsa_osh/` with provenance notes
+- Real `MLDSA_OSH` engine mode attached behind the adapter through project-owned shim logic
+- PoC-only static key provisioning path documented and isolated
+- Wrapper contract and software behavior preserved
+- Local verification explicitly split between deterministic wrapper regression and future mixed-language real-core verification
+
+## M5: Real PS/PL Bring-Up
 
 - PS software communicates with PL registers on target hardware
 - End-to-end path exercised using the stable wrapper interface
-- Continuous signing loop infrastructure available
-
-## M5: ML-DSA-OSH Core Attachment
-
-- Real ML-DSA-OSH integration attached behind the engine adapter
-- Signature flow verified against known-good vectors
-- Adapter and wrapper regressions automated
+- Optional real MMIO backend added without removing the fake backend
+- Continuous signing loop infrastructure available on the target platform
 
 ## M6: PoC Review
 
-- Correctness demonstrated
+- Correctness demonstrated within the verified scope
 - Continuous signing soak results documented
 - Remaining gaps, risks, and next-step recommendations captured

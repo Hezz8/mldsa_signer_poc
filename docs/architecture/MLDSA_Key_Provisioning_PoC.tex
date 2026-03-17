@@ -1,0 +1,26 @@
+\chapter{ML-DSA Key Provisioning for PoC}
+
+\section*{Purpose}
+This chapter documents the temporary key-material strategy used for the current ML-DSA-OSH attachment phase.
+
+\section{Current PoC Strategy}
+The current proof of concept uses static secret-key material for controlled bring-up only. The project-owned ML-DSA-OSH shim loads a preformatted ML-DSA-87 secret key image from a local memory file and presents the expected upstream key segments to the imported core interface.
+
+\section{Key Source}
+The current PoC secret-key image is derived from the first ML-DSA-87 signing key vector in the imported upstream `KAT/SigGen\_sk\_87.txt` dataset. The project stores the derived byte-oriented memory image in `hw/include/mldsa\_osh\_poc\_sk\_87.mem`.
+
+\section{Why This Is Acceptable for the Current Phase}
+The current phase is focused on integrating the real signing core behind the stable engine adapter without changing the wrapper-visible contract. Static key material reduces bring-up variables and allows the adapter and shim path to be reviewed independently from production key-management design.
+
+\section{Current Limitations}
+\begin{itemize}[leftmargin=*]
+  \item The static key image is suitable only for controlled development and simulation-oriented bring-up.
+  \item The design does not yet provide secure key loading, lifecycle management, or hardware-backed secrecy guarantees.
+  \item The current approach is intentionally incompatible with production security expectations.
+\end{itemize}
+
+\section{Replacement Direction}
+A later phase shall replace the static key image with a real key-provisioning path. Candidate future approaches include PS-assisted loading into protected PL storage, device-bound provisioning, or other architecture-reviewed mechanisms consistent with the target platform and threat model.
+
+\section{Documentation Requirement}
+Any change to the key source, format, or provisioning path shall update this chapter, the hardware microarchitecture document, the ML-DSA-OSH integration guide, and the verification plan in the same workstream.

@@ -1,4 +1,4 @@
-﻿\documentclass[11pt]{report}
+\documentclass[11pt]{report}
 \usepackage[a4paper,margin=1in]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -15,7 +15,7 @@
 
 \title{pq-signature-appliance\\Documentation Baseline}
 \author{Systems Architecture and Integration}
-\date{2026-03-16}
+\date{2026-03-17}
 
 \begin{document}
 
@@ -25,19 +25,19 @@
   \vspace{1.2cm}
   {\Large Documentation Package\par}
   \vspace{0.8cm}
-  {\large Executable Stub and Engine-Adapter Baseline for ML-DSA-87 PoC on Zynq UltraScale+\par}
+  {\large Imported ML-DSA-OSH Integration Baseline for ML-DSA-87 PoC on Zynq UltraScale+\par}
   \vfill
   \begin{tabular}{ll}
     Project & pq-signature-appliance \\
-    Status & Executable stub plus engine adapter baseline \\
+    Status & Imported-core integration baseline \\
     Target Platform & Xilinx/AMD Zynq UltraScale+ \\
     External Interface & gRPC over Ethernet \\
     Internal Interface & AXI-Lite between PS and PL \\
     Signing Input & 64-byte digest \\
-    Current Focus & Stable wrapper contract and future core attachment seam \\
+    Current Focus & Stable wrapper contract plus real ML-DSA-OSH attachment behind adapter \\
   \end{tabular}
   \vfill
-  {\large 2026-03-16\par}
+  {\large 2026-03-17\par}
 \end{titlepage}
 
 \tableofcontents
@@ -49,6 +49,7 @@
 \input{architecture/Wrapper_Spec}
 \input{architecture/Hardware_Microarchitecture}
 \input{architecture/MLDSA_OSH_Integration_Guide}
+\input{architecture/MLDSA_Key_Provisioning_PoC}
 \input{architecture/Software_Architecture}
 \input{verification/Verification_Plan}
 \input{performance/Performance_Model}

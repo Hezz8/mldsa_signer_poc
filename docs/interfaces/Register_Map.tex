@@ -1,7 +1,7 @@
-﻿\chapter{Detailed Register Map}
+\chapter{Detailed Register Map}
 
 \section*{Purpose}
-This chapter defines the stabilized AXI-Lite register map currently implemented by the software fake backend and the RTL wrapper.
+This chapter defines the stabilized AXI-Lite register map implemented by the software fake backend and the RTL wrapper.
 
 \section{Register Summary}
 \begin{longtable}{p{0.14\textwidth} p{0.19\textwidth} p{0.12\textwidth} p{0.45\textwidth}}
@@ -10,10 +10,10 @@ Offset & Name & Access & Description \\
 \midrule
 0x000 & CONTROL & RW & Start and clear-status control bits. \\
 0x004 & STATUS & RO & Idle, busy, done, and error status indicators. \\
-0x008 & ERROR\_CODE & RO & Coarse error code for wrapper or future engine-detected failure. \\
+0x008 & ERROR\_CODE & RO & Coarse error code for wrapper or engine-detected failure. \\
 0x00C & SIG\_LENGTH & RO & Reported signature length in bytes. \\
 0x010-0x04C & DIGEST[0:15] & RW & Sixteen 32-bit words holding the 64-byte input digest. \\
-0x100-0x17C & SIG\_DATA[0:31] & RO & Thirty-two 32-bit words exposing the current 128-byte signature buffer. \\
+0x100-0x1310 & SIG\_DATA[0:1156] & RO & Signature read window sized for the largest supported mode result. Deterministic modes use the leading 128 bytes; ML-DSA-87 uses up to 4627 bytes. \\
 \bottomrule
 \end{longtable}
 
@@ -35,15 +35,16 @@ Offset & Name & Access & Description \\
 \begin{itemize}[leftmargin=*]
   \item Software shall fully populate the digest registers before asserting `start`.
   \item `start` shall transition the wrapper to busy when idle.
-  \item The current adapter implementation completes after a deterministic mode-specific delay.
+  \item The adapter completes after a mode-specific delay or reports an engine error.
   \item `clear\_status` clears done and error latches and clears the signature window when the wrapper is idle.
-  \item The wrapper-visible signature window remains fixed at 128 bytes in the current deterministic modes.
+  \item `SIG\_LENGTH` reports the valid byte count for the selected engine mode.
 \end{itemize}
 
-\section{Current Deterministic Adapter Semantics}
+\section{Current Engine-Mode Semantics}
 \begin{itemize}[leftmargin=*]
   \item `STUB`: `STUBSIG || digest || zero padding`, fixed length 128 bytes, deterministic two-cycle completion.
   \item `CORE\_PLACEHOLDER`: `COREPH || digest || zero padding`, fixed length 128 bytes, deterministic four-cycle completion.
+  \item `MLDSA\_OSH`: real imported-core attachment path. The intended success case reports the real ML-DSA-87 signature length of 4627 bytes. In the current local Verilog-only regression flow, this mode is exercised via a documented fallback that reports engine error and zero signature length instead of claiming success.
 \end{itemize}
 
 \section{Current Error Codes}
@@ -51,5 +52,8 @@ Offset & Name & Access & Description \\
   \item 0: no error
   \item 1: start requested while busy
   \item 2: unsupported register offset touched by the current wrapper implementation
-  \item 3: reserved engine adapter error code for future downstream integration failures
+  \item 3: engine adapter error, including the current local `MLDSA\_OSH` fallback path when the real core is not elaborated
 \end{itemize}
+
+\section{Compatibility Note}
+The register base offsets are unchanged from earlier phases. The only compatible extension in the current phase is the larger readable extent of the `SIG\_DATA` window so the wrapper can expose the full ML-DSA-87 result without changing the logical register-bank structure.

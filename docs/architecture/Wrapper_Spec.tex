@@ -1,13 +1,13 @@
-﻿\chapter{ML-DSA AXI Wrapper Specification}
+\chapter{ML-DSA AXI Wrapper Specification}
 
 \section*{Purpose}
 This chapter specifies the stable PoC AXI-Lite wrapper that presents the hardware signing engine to Linux software.
 
 \section{Design Intent}
-The wrapper provides a narrow, deterministic control and status surface between PS software and PL logic. It remains intentionally simple so that software, simulation, and future core integration can converge on a stable contract.
+The wrapper provides a narrow, deterministic control and status surface between PS software and PL logic. It remains intentionally simple so that software, simulation, and future core refinement can converge on a stable contract.
 
 \section{Current Implemented Structure}
-The repository now contains a stable AXI-Lite wrapper that instantiates a generic ML-DSA engine adapter. The wrapper owns the PS-visible register map and sequencing contract, while the adapter owns the downstream engine-facing completion behavior.
+The repository contains a stable AXI-Lite wrapper that instantiates a generic ML-DSA engine adapter. The wrapper owns the PS-visible register map and sequencing contract, while the adapter and downstream shim own engine-facing completion behavior.
 
 \section{Primary Functions}
 \begin{itemize}[leftmargin=*]
@@ -15,19 +15,20 @@ The repository now contains a stable AXI-Lite wrapper that instantiates a generi
   \item Expose control bits for start and clear-status behavior.
   \item Report idle, busy, done, and error status.
   \item Expose signature length and a read window for signature data.
-  \item Remain agnostic to whether the adapter is operating in `STUB` or `CORE\_PLACEHOLDER` mode.
+  \item Remain agnostic to whether the adapter is operating in `STUB`, `CORE\_PLACEHOLDER`, or `MLDSA\_OSH` mode.
 \end{itemize}
 
 \section{Wrapper-to-Adapter Boundary}
-The wrapper launches the adapter with a `start` event and a 64-byte digest, then waits for adapter completion. The adapter returns busy, done, error, signature length, and signature buffer information. The wrapper does not encode knowledge of future ML-DSA-OSH internal state machines or datapath topology.
+The wrapper launches the adapter with a `start` event and a 64-byte digest, then waits for adapter completion. The adapter returns busy, done, error, signature length, and signature buffer information. The wrapper does not encode knowledge of ML-DSA-OSH internal state machines, stream ordering, or key segmentation.
 
 \section{Current Behavioral Model}
-The wrapper operates as a single-request engine for the current phase. Software shall not issue a new `start` command while the wrapper reports busy. A valid `start` clears stale visible results, launches the adapter, and later exposes a deterministic result once the adapter reports completion.
+The wrapper operates as a single-request engine for the current phase. Software shall not issue a new `start` command while the wrapper reports busy. A valid `start` clears stale visible results, launches the adapter, and later exposes a mode-dependent result once the adapter reports completion or error.
 
 \section{Current Adapter Modes}
 \begin{itemize}[leftmargin=*]
   \item \textbf{STUB:} fixed 128-byte signature, deterministic two-cycle completion latency, and signature content `STUBSIG || digest || zero padding`.
   \item \textbf{CORE\_PLACEHOLDER:} fixed 128-byte signature, deterministic four-cycle completion latency, and placeholder content `COREPH || digest || zero padding`.
+  \item \textbf{MLDSA\_OSH:} real imported-core attachment path behind the adapter. When the real mixed-language core is available, the wrapper reports the actual ML-DSA-87 signature length. In the current local Verilog-only regression flow, this mode is tested through an honest fallback that reports engine error instead of claiming cryptographic success.
 \end{itemize}
 
 \section{Control Semantics}
@@ -37,7 +38,7 @@ The wrapper operates as a single-request engine for the current phase. Software 
 \end{itemize}
 
 \section{Error Handling}
-The wrapper currently reports an error if software attempts to start a new transaction while busy or touches an unsupported register region. A reserved engine error code is also defined for future adapter-detected failures, although no current deterministic adapter mode asserts it.
+The wrapper reports an error if software attempts to start a new transaction while busy or touches an unsupported register region. It also reports an engine error when the downstream adapter signals failure, including the current local `MLDSA\_OSH` fallback case used when the real imported core is not elaborated.
 
-\section{Integration Note}
-The wrapper contract is now explicitly independent of any specific downstream ML-DSA implementation. The next phase shall replace `CORE\_PLACEHOLDER` with ML-DSA-OSH integration behind the adapter boundary without changing the wrapper-visible register contract.
+\section{Compatibility Note}
+The register base offsets are unchanged from earlier phases. The signature-data window has been compatibly extended so the wrapper can surface the larger real ML-DSA-87 signature without introducing a new register-bank concept or changing software-visible control semantics.

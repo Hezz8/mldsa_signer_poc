@@ -1,38 +1,44 @@
-﻿\chapter{Verification and Validation Plan}
+\chapter{Verification and Validation Plan}
 
 \section*{Purpose}
 This chapter defines the current verification strategy for the appliance.
 
 \section{Current Verification Goal}
-The current phase validates that the external request path, MMIO sequencing, wrapper behavior, engine-adapter behavior, and deterministic signature readback are stable enough to support later real hardware integration.
+The current phase validates that the external request path, MMIO sequencing, wrapper behavior, engine-adapter behavior, and imported-core integration seam are stable enough to support later target-hardware bring-up.
 
 \section{Verification Layers}
 \begin{longtable}{p{0.22\textwidth} p{0.68\textwidth}}
 \toprule
 Layer & Objective \\
 \midrule
-Documentation review & Confirm consistency across requirements, architecture, interfaces, planning, and prompts. \\
+Documentation review & Confirm consistency across requirements, architecture, interfaces, planning, prompts, and imported-core inspection notes. \\
 Software unit tests & Validate request checking, fake backend state transitions, and local client or service contracts. \\
-Wrapper and adapter testbench & Validate reset, digest writes, start-to-busy transition, deterministic completion, signature readback, and both adapter modes. \\
-Integration tests & Validate daemon-to-MMIO-to-stub behavior without requiring target hardware. \\
-Bring-up planning & Prepare the path for later continuous-operation testing on the real PS and PL platform. \\
+Wrapper and adapter testbench & Validate reset, digest writes, start-to-busy transition, deterministic completion, signature readback, and all currently supported wrapper-visible engine modes. \\
+Imported-core inspection & Confirm that project-owned shim logic is based on the actual imported ML-DSA-OSH sign path rather than assumptions. \\
+Mixed-language real-core verification & Add full local simulation or synthesis-backed validation for the imported sign path when tooling permits. \\
+Bring-up planning & Prepare PS-to-PL and continuous-operation testing on the real platform without changing the stable wrapper contract. \\
 \bottomrule
 \end{longtable}
 
-\section{Acceptance Focus for the Adapter Phase}
-The adapter phase is accepted primarily on correctness, observability, deterministic behavior, and interface stability. It is explicitly not intended to prove cryptographic correctness or target throughput.
+\section{Acceptance Focus for the Current Phase}
+The current phase is accepted primarily on interface stability, provenance clarity, inspected-core attachment correctness at the architectural level, and preservation of the existing software contract. It is explicitly not accepted on the basis of already-proven end-to-end cryptographic correctness in the current local tool flow.
 
 \section{Current Test Assets}
 \begin{itemize}[leftmargin=*]
   \item Python unit tests for digest validation and fake backend state transitions
   \item Python contract tests for the local client and service path
-  \item A SystemVerilog wrapper testbench that covers `STUB` and `CORE\_PLACEHOLDER` adapter modes
+  \item A SystemVerilog wrapper testbench that covers `STUB`, `CORE\_PLACEHOLDER`, and the documented `MLDSA\_OSH` fallback behavior
+  \item Imported-core inspection notes tied to the actual upstream source files
 \end{itemize}
+
+\section{Current Limits}
+The imported upstream sign path mixes Verilog and VHDL. The current portable local environment does not provide mixed-language elaboration, so full real-core local simulation is still pending. This limitation shall be tracked explicitly rather than hidden behind placeholder success cases.
 
 \section{Key Exit Criteria}
 \begin{itemize}[leftmargin=*]
   \item Documented registers and control bits are implemented consistently in software and the wrapper.
-  \item The deterministic adapter modes are documented and simulation-backed.
+  \item Deterministic `STUB` mode remains simulation-backed for regression.
+  \item The `MLDSA\_OSH` adapter and shim path is documented against the real imported sign interface.
   \item The software execution path runs without real hardware.
-  \item The repository is ready for a later phase that replaces `CORE\_PLACEHOLDER` with real ML-DSA-OSH integration.
+  \item The repository is ready for a follow-on phase that adds real PS or PL bring-up and stronger verification of the imported sign path.
 \end{itemize}

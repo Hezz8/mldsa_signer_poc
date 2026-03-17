@@ -97,11 +97,11 @@ module wrapper_mode_runner #(
 
   function automatic int unsigned expected_wait_cycles;
     begin
-      if (ENGINE_MODE == ENGINE_MODE_STUB) begin
-        expected_wait_cycles = STUB_DELAY_CYCLES + 1;
-      end else begin
-        expected_wait_cycles = CORE_PLACEHOLDER_DELAY_CYCLES + 1;
-      end
+      case (ENGINE_MODE)
+        ENGINE_MODE_STUB: expected_wait_cycles = STUB_DELAY_CYCLES + 1;
+        ENGINE_MODE_CORE_PLACEHOLDER: expected_wait_cycles = CORE_PLACEHOLDER_DELAY_CYCLES + 1;
+        default: expected_wait_cycles = MLDSA_OSH_RESET_CYCLES + 4;
+      endcase
     end
   endfunction
 
@@ -158,28 +158,45 @@ module wrapper_mode_runner #(
     repeat (expected_wait_cycles()) @(posedge clk);
 
     axi_read(STATUS_ADDR, readback);
-    if ((readback & STATUS_DONE_MASK) == 0) begin
-      $fatal(1, "done bit was not asserted after deterministic delay in mode %0d", ENGINE_MODE);
+    if (ENGINE_MODE == ENGINE_MODE_MLDSA_OSH) begin
+      if ((readback & STATUS_ERROR_MASK) == 0) begin
+        $fatal(1, "MLDSA_OSH fallback mode did not assert error when real core was not compiled in");
+      end
+      if ((readback & STATUS_BUSY_MASK) != 0) begin
+        $fatal(1, "MLDSA_OSH fallback mode remained busy after failure path");
+      end
+      axi_read(ERROR_CODE_ADDR, readback);
+      expect_equal(readback, ERROR_ENGINE, "MLDSA_OSH fallback should surface engine error code");
+
+      axi_read(SIG_LENGTH_ADDR, readback);
+      expect_equal(readback, 32'h0, "MLDSA_OSH fallback should not report signature data");
+
+      axi_read(SIG_DATA_BASE_ADDR, readback);
+      expect_equal(readback, 32'h0, "MLDSA_OSH fallback should expose zeroed signature data");
+    end else begin
+      if ((readback & STATUS_DONE_MASK) == 0) begin
+        $fatal(1, "done bit was not asserted after deterministic delay in mode %0d", ENGINE_MODE);
+      end
+
+      axi_read(SIG_LENGTH_ADDR, readback);
+      expect_equal(readback, SIG_BYTES, "signature length should remain fixed in deterministic modes");
+
+      axi_read(SIG_DATA_BASE_ADDR, readback);
+      expect_equal(readback, expected_sig_word0(), "first signature word mismatch");
+
+      axi_read(SIG_DATA_BASE_ADDR + 4, readback);
+      expect_equal(readback, expected_sig_word1(), "second signature word mismatch");
     end
-
-    axi_read(SIG_LENGTH_ADDR, readback);
-    expect_equal(readback, SIG_BYTES, "signature length should remain fixed");
-
-    axi_read(SIG_DATA_BASE_ADDR, readback);
-    expect_equal(readback, expected_sig_word0(), "first signature word mismatch");
-
-    axi_read(SIG_DATA_BASE_ADDR + 4, readback);
-    expect_equal(readback, expected_sig_word1(), "second signature word mismatch");
 
     axi_write(CONTROL_ADDR, CONTROL_CLEAR_STATUS_MASK);
     axi_read(STATUS_ADDR, readback);
     expect_equal(readback, STATUS_IDLE_MASK, "clear_status should restore idle-only state");
 
-    if (ENGINE_MODE == ENGINE_MODE_STUB) begin
-      $display("wrapper_mode_runner STUB: PASS");
-    end else begin
-      $display("wrapper_mode_runner CORE_PLACEHOLDER: PASS");
-    end
+    case (ENGINE_MODE)
+      ENGINE_MODE_STUB: $display("wrapper_mode_runner STUB: PASS");
+      ENGINE_MODE_CORE_PLACEHOLDER: $display("wrapper_mode_runner CORE_PLACEHOLDER: PASS");
+      default: $display("wrapper_mode_runner MLDSA_OSH_FALLBACK: PASS");
+    endcase
     test_done = 1'b1;
   end
 endmodule
@@ -187,6 +204,7 @@ endmodule
 module tb_axi_lite_wrapper;
   logic stub_done;
   logic placeholder_done;
+  logic mldsa_osh_done;
 
   wrapper_mode_runner #(
     .ENGINE_MODE(wrapper_pkg::ENGINE_MODE_STUB)
@@ -200,8 +218,14 @@ module tb_axi_lite_wrapper;
     .test_done(placeholder_done)
   );
 
+  wrapper_mode_runner #(
+    .ENGINE_MODE(wrapper_pkg::ENGINE_MODE_MLDSA_OSH)
+  ) mldsa_osh_runner (
+    .test_done(mldsa_osh_done)
+  );
+
   initial begin
-    wait (stub_done && placeholder_done);
+    wait (stub_done && placeholder_done && mldsa_osh_done);
     $display("tb_axi_lite_wrapper: PASS");
     $finish;
   end

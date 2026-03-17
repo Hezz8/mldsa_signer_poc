@@ -1,14 +1,16 @@
-﻿# RTL Area
+# RTL Area
 
-This directory contains synthesizable modules that sit behind the PS-visible AXI-Lite wrapper.
+This directory contains project-owned RTL that sits behind the PS-visible AXI-Lite wrapper.
 
 Current contents:
 
-- `mldsa_engine_adapter.sv`: stable adapter layer between the wrapper contract and a future ML-DSA core implementation.
+- `mldsa_engine_adapter.sv`: stable adapter layer between the wrapper contract and selectable engine implementations.
+- `mldsa_osh_shim.sv`: project-owned shim that translates the adapter contract into the inspected ML-DSA-OSH sign-stream interface.
 
 Current adapter modes:
 
-- `STUB`: reproduces the deterministic fake signature behavior used for software and wrapper contract validation.
-- `CORE_PLACEHOLDER`: preserves the same adapter contract while standing in for a future ML-DSA-OSH-facing engine integration.
+- `STUB`: deterministic fake signature path used for software and wrapper regression.
+- `CORE_PLACEHOLDER`: deterministic seam-testing mode that keeps the adapter contract stable.
+- `MLDSA_OSH`: real attachment path to the imported ML-DSA-OSH source when a suitable mixed-language simulation or synthesis flow is available.
 
-No cryptographic implementation is present yet.
+The shim is intentionally separate from the imported third-party source under `hw/ip/mldsa_osh/` so project-owned integration logic can evolve without modifying the vendored snapshot.

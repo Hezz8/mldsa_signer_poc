@@ -1,4 +1,4 @@
-﻿# Roadmap
+# Roadmap
 
 ## Objective
 
@@ -6,7 +6,7 @@ Establish a credible engineering path from repository bootstrap to a working pro
 
 ## Current Phase
 
-The repository is in the hardware adapter stabilization phase. The external API, internal register map, software sequencing, and wrapper behavior remain stable, and the PL-side architecture now includes an explicit engine adapter seam for future ML-DSA-OSH integration. No real ML-DSA implementation has been integrated yet.
+The repository is in the imported-core integration phase. The external API, register map base layout, software sequencing, and wrapper behavior remain stable. ML-DSA-OSH source is now imported under `hw/ip/mldsa_osh/`, and the PL-side architecture includes a real adapter and shim path for ML-DSA-87 signing. Full local simulation of the imported sign path remains constrained by mixed-language tooling availability.
 
 ## Workstreams
 
@@ -20,23 +20,25 @@ The repository is in the hardware adapter stabilization phase. The external API,
 
 - Maintain the transport-independent service core and MMIO device layer
 - Keep the optional gRPC binding path aligned with the canonical proto
-- Expand validation, telemetry, and soak-test hooks without breaking the public software API
+- Preserve the fake backend while adding a future real MMIO backend only when the target bring-up phase starts
 
 ### 3. Hardware platform
 
 - Keep the AXI-Lite wrapper contract stable
-- Keep the engine adapter as the only intended attachment point for future ML-DSA-OSH integration
-- Replace deterministic adapter modes with the real core without breaking wrapper-visible behavior
+- Keep the engine adapter as the only intended attachment point for ML-DSA-OSH integration
+- Keep project-owned shim logic separate from the vendored third-party source
+- Preserve `STUB` mode while the real core path matures
 
 ### 4. Verification and performance
 
 - Maintain unit, simulation, integration, and end-to-end verification layers
+- Separate deterministic wrapper regression from real imported-core verification
 - Continue refining realistic throughput and latency models
 - Prepare continuous signing and stability campaigns on hardware
 
 ### 5. Security hardening
 
-- Replace PoC key handling assumptions with a production-grade key management approach later
+- Replace PoC static key handling with a production-grade key-management approach later
 - Review privilege boundaries and operational controls
 - Add robustness features for malformed input and fault handling
 
@@ -64,15 +66,18 @@ The repository is in the hardware adapter stabilization phase. The external API,
 - `STUB` and `CORE_PLACEHOLDER` modes validate the future integration seam
 - The software contract remains unchanged while hardware internals become more modular
 
-### Phase E: Real bring-up
+### Phase E: Imported-core attachment
 
-- Replace the fake backend with real MMIO access on target hardware
+- ML-DSA-OSH source is imported with provenance recorded
+- The adapter gains a real `MLDSA_OSH` mode through project-owned shim logic
+- Wrapper semantics and software behavior remain stable
+- Local verification remains limited to deterministic wrapper regression plus honest fallback checks until mixed-language simulation or synthesis-backed validation is available
+
+### Phase F: Real bring-up
+
+- Replace the fake backend with real MMIO access on target hardware while preserving the software API
 - Exercise PS and PL sequencing against the stable wrapper implementation
-
-### Phase F: Core integration
-
-- Integrate ML-DSA-OSH behind the engine adapter
-- Demonstrate end-to-end signing on target hardware
+- Validate the imported-core path on actual target hardware or a stronger mixed-language verification flow
 
 ### Phase G: Refinement
 
