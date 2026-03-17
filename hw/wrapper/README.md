@@ -1,17 +1,20 @@
-﻿# AXI-Lite Wrapper Stub
+﻿# AXI-Lite Wrapper
 
-This directory now contains the first executable hardware-side scaffold for the repository:
+This directory contains the PS-visible AXI-Lite contract boundary for the appliance.
 
-- `wrapper_pkg.sv`: constants for register offsets, control bits, status bits, and stub sizing.
-- `axi_lite_wrapper_stub.sv`: AXI-Lite slave wrapper stub with deterministic fake signing behavior.
+Current contents:
+
+- `wrapper_pkg.sv`: shared register offsets, control and status bits, widths, and engine mode constants.
+- `axi_lite_wrapper.sv`: stable AXI-Lite wrapper top that presents the register map to software and instantiates the engine adapter.
 - `TODO.md`: forward-looking wrapper implementation tasks.
 
-Current behavior is intentionally stubbed:
+Current behavior remains intentionally non-cryptographic:
 
 - software writes a 64-byte digest into the documented digest window
 - a `start` write transitions the wrapper into `busy`
-- after a deterministic two-cycle delay the wrapper transitions to `done`
-- the signature buffer is populated with `STUBSIG || digest || zero padding` up to 128 bytes
+- the wrapper delegates signing behavior to `mldsa_engine_adapter`
+- `STUB` mode returns `STUBSIG || digest || zero padding` after a deterministic two-cycle latency
+- `CORE_PLACEHOLDER` mode returns `COREPH || digest || zero padding` after a deterministic four-cycle latency
 - no ML-DSA datapath or external crypto core is present
 
-This stub is intended for interface validation, software sequencing, and early simulation only.
+The wrapper contract is now intended to remain stable while future ML-DSA-OSH integration occurs behind the adapter boundary.

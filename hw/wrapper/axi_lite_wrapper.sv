@@ -1,6 +1,8 @@
 `timescale 1ns / 1ps
 
-module axi_lite_wrapper_stub (
+module axi_lite_wrapper #(
+  parameter int unsigned ENGINE_MODE = wrapper_pkg::ENGINE_MODE_STUB
+) (
   input  logic        aclk,
   input  logic        aresetn,
   input  logic [31:0] s_axi_awaddr,
@@ -25,13 +27,18 @@ module axi_lite_wrapper_stub (
 
   logic [7:0] digest_bytes [0:DIGEST_BYTES-1];
   logic [7:0] signature_bytes [0:SIG_BYTES-1];
-  logic [31:0] error_code_reg;
-  logic [31:0] sig_length_reg;
-  logic busy_reg;
+  logic [DIGEST_BITS-1:0] digest_vector;
+  logic engine_busy;
+  logic engine_done;
+  logic engine_error;
+  logic [31:0] engine_signature_length;
+  logic [SIG_BITS-1:0] engine_signature_buffer;
+  logic operation_inflight_reg;
   logic done_reg;
   logic error_reg;
-  logic [31:0] busy_countdown_reg;
-
+  logic [31:0] error_code_reg;
+  logic [31:0] sig_length_reg;
+  logic start_request;
   integer i;
 
   assign s_axi_awready = 1'b1;
@@ -39,6 +46,32 @@ module axi_lite_wrapper_stub (
   assign s_axi_bresp = 2'b00;
   assign s_axi_arready = 1'b1;
   assign s_axi_rresp = 2'b00;
+
+  assign start_request = s_axi_awvalid && s_axi_wvalid && !s_axi_bvalid &&
+                         (s_axi_awaddr == CONTROL_ADDR) &&
+                         ((s_axi_wdata & CONTROL_START_MASK) != 32'h0) &&
+                         !operation_inflight_reg;
+
+  always_comb begin
+    digest_vector = '0;
+    for (int unsigned digest_index = 0; digest_index < DIGEST_BYTES; digest_index = digest_index + 1) begin
+      digest_vector[(digest_index * 8) +: 8] = digest_bytes[digest_index];
+    end
+  end
+
+  mldsa_engine_adapter #(
+    .ENGINE_MODE(ENGINE_MODE)
+  ) engine_adapter (
+    .clk(aclk),
+    .rst(!aresetn),
+    .start(start_request),
+    .digest(digest_vector),
+    .busy(engine_busy),
+    .done(engine_done),
+    .error(engine_error),
+    .signature_length(engine_signature_length),
+    .signature_buffer(engine_signature_buffer)
+  );
 
   function automatic logic [31:0] pack_bytes(
     input logic [7:0] b0,
@@ -49,26 +82,13 @@ module axi_lite_wrapper_stub (
     pack_bytes = {b3, b2, b1, b0};
   endfunction
 
-  function automatic logic [7:0] stub_prefix_byte(input int unsigned index);
-    case (index)
-      0: stub_prefix_byte = 8'h53;
-      1: stub_prefix_byte = 8'h54;
-      2: stub_prefix_byte = 8'h55;
-      3: stub_prefix_byte = 8'h42;
-      4: stub_prefix_byte = 8'h53;
-      5: stub_prefix_byte = 8'h49;
-      6: stub_prefix_byte = 8'h47;
-      default: stub_prefix_byte = 8'h00;
-    endcase
-  endfunction
-
   function automatic logic [31:0] read_word(input logic [31:0] addr);
     int unsigned index;
     begin
       read_word = 32'h0;
       unique case (addr)
         CONTROL_ADDR: read_word = 32'h0;
-        STATUS_ADDR: read_word = status_word(busy_reg, done_reg, error_reg);
+        STATUS_ADDR: read_word = status_word(operation_inflight_reg, done_reg, error_reg);
         ERROR_CODE_ADDR: read_word = error_code_reg;
         SIG_LENGTH_ADDR: read_word = sig_length_reg;
         default: begin
@@ -88,41 +108,22 @@ module axi_lite_wrapper_stub (
               signature_bytes[index * 4 + 2],
               signature_bytes[index * 4 + 3]
             );
-          end else begin
-            read_word = 32'h0;
           end
         end
       endcase
     end
   endfunction
 
-  task automatic build_stub_signature;
-    int unsigned byte_index;
-    begin
-      for (byte_index = 0; byte_index < SIG_BYTES; byte_index = byte_index + 1) begin
-        if (byte_index < 7) begin
-          signature_bytes[byte_index] <= stub_prefix_byte(byte_index);
-        end else if (byte_index < 7 + DIGEST_BYTES) begin
-          signature_bytes[byte_index] <= digest_bytes[byte_index - 7];
-        end else begin
-          signature_bytes[byte_index] <= 8'h00;
-        end
-      end
-      sig_length_reg <= SIG_BYTES;
-    end
-  endtask
-
   always_ff @(posedge aclk) begin
     if (!aresetn) begin
       s_axi_bvalid <= 1'b0;
       s_axi_rvalid <= 1'b0;
       s_axi_rdata <= 32'h0;
-      error_code_reg <= ERROR_NONE;
-      sig_length_reg <= 32'h0;
-      busy_reg <= 1'b0;
+      operation_inflight_reg <= 1'b0;
       done_reg <= 1'b0;
       error_reg <= 1'b0;
-      busy_countdown_reg <= 32'h0;
+      error_code_reg <= ERROR_NONE;
+      sig_length_reg <= 32'h0;
       for (i = 0; i < DIGEST_BYTES; i = i + 1) begin
         digest_bytes[i] <= 8'h00;
       end
@@ -137,36 +138,46 @@ module axi_lite_wrapper_stub (
         s_axi_rvalid <= 1'b0;
       end
 
-      if (busy_reg && (busy_countdown_reg != 0)) begin
-        busy_countdown_reg <= busy_countdown_reg - 1'b1;
-        if (busy_countdown_reg == 1) begin
-          busy_reg <= 1'b0;
-          done_reg <= 1'b1;
-          build_stub_signature();
+      if (engine_done) begin
+        operation_inflight_reg <= 1'b0;
+        done_reg <= 1'b1;
+        error_reg <= 1'b0;
+        error_code_reg <= ERROR_NONE;
+        sig_length_reg <= engine_signature_length;
+        for (i = 0; i < SIG_BYTES; i = i + 1) begin
+          signature_bytes[i] <= engine_signature_buffer[(i * 8) +: 8];
         end
+      end
+
+      if (engine_error) begin
+        operation_inflight_reg <= 1'b0;
+        done_reg <= 1'b0;
+        error_reg <= 1'b1;
+        error_code_reg <= ERROR_ENGINE;
       end
 
       if (s_axi_awvalid && s_axi_wvalid && !s_axi_bvalid) begin
         s_axi_bvalid <= 1'b1;
         unique case (s_axi_awaddr)
           CONTROL_ADDR: begin
-            if (s_axi_wdata & CONTROL_CLEAR_STATUS_MASK) begin
+            if ((s_axi_wdata & CONTROL_CLEAR_STATUS_MASK) != 32'h0) begin
               done_reg <= 1'b0;
               error_reg <= 1'b0;
               error_code_reg <= ERROR_NONE;
-              if (!busy_reg) begin
+              if (!operation_inflight_reg) begin
                 sig_length_reg <= 32'h0;
                 for (i = 0; i < SIG_BYTES; i = i + 1) begin
                   signature_bytes[i] <= 8'h00;
                 end
               end
             end
-            if (s_axi_wdata & CONTROL_START_MASK) begin
-              if (busy_reg) begin
+            if ((s_axi_wdata & CONTROL_START_MASK) != 32'h0) begin
+              if (operation_inflight_reg) begin
                 error_reg <= 1'b1;
                 done_reg <= 1'b0;
                 error_code_reg <= ERROR_START_WHILE_BUSY;
               end else begin
+                operation_inflight_reg <= 1'b1;
                 error_reg <= 1'b0;
                 done_reg <= 1'b0;
                 error_code_reg <= ERROR_NONE;
@@ -174,19 +185,17 @@ module axi_lite_wrapper_stub (
                 for (i = 0; i < SIG_BYTES; i = i + 1) begin
                   signature_bytes[i] <= 8'h00;
                 end
-                busy_reg <= 1'b1;
-                busy_countdown_reg <= STUB_DELAY_CYCLES;
               end
             end
           end
           default: begin
             if ((s_axi_awaddr >= DIGEST_BASE_ADDR) && (s_axi_awaddr < DIGEST_BASE_ADDR + (DIGEST_WORDS * 4))) begin
-              int unsigned digest_index;
-              digest_index = (s_axi_awaddr - DIGEST_BASE_ADDR) >> 2;
-              if (s_axi_wstrb[0]) digest_bytes[digest_index * 4] <= s_axi_wdata[7:0];
-              if (s_axi_wstrb[1]) digest_bytes[digest_index * 4 + 1] <= s_axi_wdata[15:8];
-              if (s_axi_wstrb[2]) digest_bytes[digest_index * 4 + 2] <= s_axi_wdata[23:16];
-              if (s_axi_wstrb[3]) digest_bytes[digest_index * 4 + 3] <= s_axi_wdata[31:24];
+              int unsigned digest_word_index;
+              digest_word_index = (s_axi_awaddr - DIGEST_BASE_ADDR) >> 2;
+              if (s_axi_wstrb[0]) digest_bytes[digest_word_index * 4] <= s_axi_wdata[7:0];
+              if (s_axi_wstrb[1]) digest_bytes[digest_word_index * 4 + 1] <= s_axi_wdata[15:8];
+              if (s_axi_wstrb[2]) digest_bytes[digest_word_index * 4 + 2] <= s_axi_wdata[23:16];
+              if (s_axi_wstrb[3]) digest_bytes[digest_word_index * 4 + 3] <= s_axi_wdata[31:24];
             end else begin
               error_reg <= 1'b1;
               error_code_reg <= ERROR_INVALID_OFFSET;

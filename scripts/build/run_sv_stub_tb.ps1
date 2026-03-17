@@ -7,13 +7,14 @@ if (-not (Test-Path $OssCadRoot)) {
 }
 
 $env:PATH = "$OssCadRoot\bin;$OssCadRoot\lib;$env:PATH"
-$BuildDir = Join-Path $RepoRoot "build\sv_stub"
+$BuildDir = Join-Path $RepoRoot "build\sv_wrapper"
 New-Item -ItemType Directory -Force $BuildDir | Out-Null
 
-$Output = Join-Path $BuildDir "tb_axi_lite_wrapper_stub.vvp"
-iverilog -g2012 -s tb_axi_lite_wrapper_stub -o $Output `
+$Output = Join-Path $BuildDir "tb_axi_lite_wrapper.vvp"
+iverilog -g2012 -s tb_axi_lite_wrapper -o $Output `
     (Join-Path $RepoRoot 'hw\wrapper\wrapper_pkg.sv') `
-    (Join-Path $RepoRoot 'hw\wrapper\axi_lite_wrapper_stub.sv') `
-    (Join-Path $RepoRoot 'hw\tb\tb_axi_lite_wrapper_stub.sv')
+    (Join-Path $RepoRoot 'hw\rtl\mldsa_engine_adapter.sv') `
+    (Join-Path $RepoRoot 'hw\wrapper\axi_lite_wrapper.sv') `
+    (Join-Path $RepoRoot 'hw\tb\tb_axi_lite_wrapper.sv')
 
 vvp $Output

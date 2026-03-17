@@ -1,6 +1,10 @@
 `timescale 1ns / 1ps
 
-module tb_axi_lite_wrapper_stub;
+module wrapper_mode_runner #(
+  parameter int unsigned ENGINE_MODE = wrapper_pkg::ENGINE_MODE_STUB
+) (
+  output logic test_done
+);
   import wrapper_pkg::*;
 
   logic clk;
@@ -22,8 +26,12 @@ module tb_axi_lite_wrapper_stub;
   logic [1:0] rresp;
   logic rvalid;
   logic rready;
+  logic [31:0] readback;
+  integer word_index;
 
-  axi_lite_wrapper_stub dut (
+  axi_lite_wrapper #(
+    .ENGINE_MODE(ENGINE_MODE)
+  ) dut (
     .aclk(clk),
     .aresetn(rst_n),
     .s_axi_awaddr(awaddr),
@@ -87,8 +95,35 @@ module tb_axi_lite_wrapper_stub;
     end
   endtask
 
-  logic [31:0] readback;
-  integer word_index;
+  function automatic int unsigned expected_wait_cycles;
+    begin
+      if (ENGINE_MODE == ENGINE_MODE_STUB) begin
+        expected_wait_cycles = STUB_DELAY_CYCLES + 1;
+      end else begin
+        expected_wait_cycles = CORE_PLACEHOLDER_DELAY_CYCLES + 1;
+      end
+    end
+  endfunction
+
+  function automatic logic [31:0] expected_sig_word0;
+    begin
+      if (ENGINE_MODE == ENGINE_MODE_STUB) begin
+        expected_sig_word0 = 32'h4255_5453;
+      end else begin
+        expected_sig_word0 = 32'h4552_4F43;
+      end
+    end
+  endfunction
+
+  function automatic logic [31:0] expected_sig_word1;
+    begin
+      if (ENGINE_MODE == ENGINE_MODE_STUB) begin
+        expected_sig_word1 = 32'h0047_4953;
+      end else begin
+        expected_sig_word1 = 32'h0100_4850;
+      end
+    end
+  endfunction
 
   initial begin
     awaddr = '0;
@@ -101,6 +136,7 @@ module tb_axi_lite_wrapper_stub;
     arvalid = 1'b0;
     rready = 1'b0;
     rst_n = 1'b0;
+    test_done = 1'b0;
 
     repeat (4) @(posedge clk);
     rst_n = 1'b1;
@@ -112,36 +148,61 @@ module tb_axi_lite_wrapper_stub;
       axi_write(DIGEST_BASE_ADDR + (word_index * 4), 32'h03020100 + (word_index * 32'h04040404));
     end
 
-    axi_write(DIGEST_BASE_ADDR + 0, 32'h03020100);
-    axi_write(DIGEST_BASE_ADDR + 4, 32'h07060504);
     axi_write(CONTROL_ADDR, CONTROL_START_MASK);
 
     axi_read(STATUS_ADDR, readback);
-    if (((readback & STATUS_BUSY_MASK) == 0) && ((readback & STATUS_DONE_MASK) == 0)) begin
-      $fatal(1, "wrapper did not leave idle-only state after start");
+    if ((readback & STATUS_BUSY_MASK) == 0) begin
+      $fatal(1, "start did not assert busy in mode %0d", ENGINE_MODE);
     end
 
-    repeat (STUB_DELAY_CYCLES + 1) @(posedge clk);
+    repeat (expected_wait_cycles()) @(posedge clk);
 
     axi_read(STATUS_ADDR, readback);
     if ((readback & STATUS_DONE_MASK) == 0) begin
-      $fatal(1, "done bit was not asserted after deterministic delay");
+      $fatal(1, "done bit was not asserted after deterministic delay in mode %0d", ENGINE_MODE);
     end
 
     axi_read(SIG_LENGTH_ADDR, readback);
-    expect_equal(readback, SIG_BYTES, "signature length should be fixed stub size");
+    expect_equal(readback, SIG_BYTES, "signature length should remain fixed");
 
     axi_read(SIG_DATA_BASE_ADDR, readback);
-    expect_equal(readback, 32'h4255_5453, "first signature word should encode STUB");
+    expect_equal(readback, expected_sig_word0(), "first signature word mismatch");
 
     axi_read(SIG_DATA_BASE_ADDR + 4, readback);
-    expect_equal(readback, 32'h0047_4953, "second signature word should encode SIG and digest byte 0");
+    expect_equal(readback, expected_sig_word1(), "second signature word mismatch");
 
     axi_write(CONTROL_ADDR, CONTROL_CLEAR_STATUS_MASK);
     axi_read(STATUS_ADDR, readback);
     expect_equal(readback, STATUS_IDLE_MASK, "clear_status should restore idle-only state");
 
-    $display("tb_axi_lite_wrapper_stub: PASS");
+    if (ENGINE_MODE == ENGINE_MODE_STUB) begin
+      $display("wrapper_mode_runner STUB: PASS");
+    end else begin
+      $display("wrapper_mode_runner CORE_PLACEHOLDER: PASS");
+    end
+    test_done = 1'b1;
+  end
+endmodule
+
+module tb_axi_lite_wrapper;
+  logic stub_done;
+  logic placeholder_done;
+
+  wrapper_mode_runner #(
+    .ENGINE_MODE(wrapper_pkg::ENGINE_MODE_STUB)
+  ) stub_runner (
+    .test_done(stub_done)
+  );
+
+  wrapper_mode_runner #(
+    .ENGINE_MODE(wrapper_pkg::ENGINE_MODE_CORE_PLACEHOLDER)
+  ) placeholder_runner (
+    .test_done(placeholder_done)
+  );
+
+  initial begin
+    wait (stub_done && placeholder_done);
+    $display("tb_axi_lite_wrapper: PASS");
     $finish;
   end
 endmodule

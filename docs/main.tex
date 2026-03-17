@@ -14,7 +14,7 @@
 \hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
 
 \title{pq-signature-appliance\\Documentation Baseline}
-\author{Systems Architecture Bootstrap}
+\author{Systems Architecture and Integration}
 \date{2026-03-16}
 
 \begin{document}
@@ -25,16 +25,16 @@
   \vspace{1.2cm}
   {\Large Documentation Package\par}
   \vspace{0.8cm}
-  {\large Bootstrap Baseline for ML-DSA-87 PoC on Zynq UltraScale+\par}
+  {\large Executable Stub and Engine-Adapter Baseline for ML-DSA-87 PoC on Zynq UltraScale+\par}
   \vfill
   \begin{tabular}{ll}
     Project & pq-signature-appliance \\
-    Status & Bootstrap and documentation only \\
+    Status & Executable stub plus engine adapter baseline \\
     Target Platform & Xilinx/AMD Zynq UltraScale+ \\
     External Interface & gRPC over Ethernet \\
     Internal Interface & AXI-Lite between PS and PL \\
     Signing Input & 64-byte digest \\
-    Current Focus & Correctness and continuous signing \\
+    Current Focus & Stable wrapper contract and future core attachment seam \\
   \end{tabular}
   \vfill
   {\large 2026-03-16\par}
@@ -48,6 +48,7 @@
 \input{interfaces/ICD}
 \input{architecture/Wrapper_Spec}
 \input{architecture/Hardware_Microarchitecture}
+\input{architecture/MLDSA_OSH_Integration_Guide}
 \input{architecture/Software_Architecture}
 \input{verification/Verification_Plan}
 \input{performance/Performance_Model}

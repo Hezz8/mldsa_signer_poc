@@ -1,0 +1,42 @@
+﻿\chapter{ML-DSA-OSH Integration Guide}
+
+\section*{Purpose}
+This chapter defines the planned integration seam between the stable wrapper contract and a future ML-DSA-OSH hardware implementation.
+
+\section{Why the Engine Adapter Exists}
+The AXI-Lite wrapper is the PS-visible contract boundary and should remain stable across hardware implementation changes. Directly coupling the wrapper to ML-DSA-OSH-specific internals would make software, documentation, and verification collateral vulnerable to avoidable churn. The engine adapter isolates that risk.
+
+\section{Intended Boundary}
+The wrapper owns register decode, digest staging, control semantics, status visibility, and signature readback windows. The adapter owns the downstream handshake for a signing operation: start acceptance, operation progress, completion indication, and signature return data. ML-DSA-OSH shall later attach on the engine side of the adapter rather than directly on the AXI-Lite boundary.
+
+\section{Expected Future Integration Points}
+\begin{itemize}[leftmargin=*]
+  \item command launch from the adapter into ML-DSA-OSH control logic
+  \item digest transfer or digest-to-message representative handling as required by the real core
+  \item completion, error, and ready or valid handshake translation
+  \item signature output capture into the adapter result path
+  \item optional buffering or byte-lane adaptation between core-native outputs and wrapper-visible signature windows
+\end{itemize}
+
+\section{Current Deterministic Modes}
+The current adapter supports two non-cryptographic modes:
+\begin{itemize}[leftmargin=*]
+  \item `STUB`, which reproduces the existing fake result path used by software and contract tests
+  \item `CORE\_PLACEHOLDER`, which stands in for a future ML-DSA-OSH attachment while preserving the same adapter-facing contract
+\end{itemize}
+
+\section{Risks of Direct Coupling}
+Direct coupling of the wrapper to ML-DSA-OSH internals would risk register-map churn, wrapper FSM churn, and avoidable software regressions when the core integration evolves. It would also make simulation and interface-only verification harder because deterministic adapter modes would disappear too early.
+
+\section{Verification Strategy for Future Replacement}
+When `CORE\_PLACEHOLDER` is replaced by real ML-DSA-OSH integration, verification should proceed in this order:
+\begin{enumerate}[leftmargin=*]
+  \item preserve wrapper-level testbench coverage for register behavior and control sequencing
+  \item retain the adapter contract and add adapter-to-core handshake checks
+  \item compare signature-length and completion semantics against core expectations
+  \item add known-good vector checks only after the real core is attached
+  \item keep software tests unchanged unless an explicit interface decision is approved and documented
+\end{enumerate}
+
+\section{Current Non-Goals}
+This guide does not define ML-DSA-OSH internals, real key storage, or final throughput tuning. No real ML-DSA hardware is integrated in the current repository state.

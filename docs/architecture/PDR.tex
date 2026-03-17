@@ -1,7 +1,7 @@
 ﻿\chapter{Preliminary Design Review}
 
 \section*{Purpose}
-This chapter captures the initial architectural direction for the proof-of-concept appliance.
+This chapter captures the current architectural direction for the proof-of-concept appliance.
 
 \section{System Objective}
 The system accepts a 64-byte digest from a remote client, forwards it through a Linux-resident gRPC service, sequences a hardware signing request through AXI-Lite, and returns the resulting ML-DSA-87 signature.
@@ -10,19 +10,23 @@ The system accepts a 64-byte digest from a remote client, forwards it through a 
 \begin{itemize}[leftmargin=*]
   \item \textbf{Client side:} submits signing requests over Ethernet.
   \item \textbf{PS software:} runs Linux, hosts the gRPC daemon, validates requests, manages MMIO, and reports status.
-  \item \textbf{PL logic:} hosts the wrapper and the future signing datapath.
+  \item \textbf{PL logic:} hosts the stable AXI-Lite wrapper, the ML-DSA engine adapter, and the future signing datapath.
 \end{itemize}
 
 \section{Key Architectural Choices}
 \begin{itemize}[leftmargin=*]
-  \item Use AXI-Lite for the initial PS/PL boundary to minimize integration complexity.
+  \item Use AXI-Lite for the initial PS and PL boundary to minimize integration complexity.
   \item Keep the external API pre-hash oriented so the service boundary is simple and deterministic.
   \item Treat continuous signing stability as a primary PoC success metric.
   \item Keep the wrapper contract independent from any single downstream ML-DSA implementation.
+  \item Introduce an explicit engine adapter layer so ML-DSA-OSH can be attached later without changing the wrapper-visible contract.
 \end{itemize}
+
+\section{Current Implementation Boundary}
+The current implementation remains intentionally non-cryptographic. The wrapper and engine adapter are real RTL scaffolding, while the adapter modes are deterministic placeholders used to validate sequencing, register stability, and future integration seams.
 
 \section{PoC Boundaries}
 The proof of concept is not intended to be the final production architecture. The initial design accepts higher software overhead in exchange for easier bring-up, straightforward verification, and a stable interface that future optimized implementations can preserve.
 
 \section{Deferred Topics}
-Deferred topics include key management hardening, peak throughput optimization, secure boot interactions, and packaging for field deployment.
+Deferred topics include real ML-DSA-OSH integration, key management hardening, peak throughput optimization, secure boot interactions, and packaging for field deployment.

@@ -13,11 +13,11 @@ The repository now supports a user-space tooling workflow that avoids administra
 - Python tests and local self-tests run from `.venv`
 - `iverilog` and `vvp` run from the portable OSS CAD Suite bundle
 - `tectonic` runs from a repo-local portable binary
-- Windows-native scripts exist for docs and SV testbench execution
+- Windows-native scripts exist for docs and stable wrapper testbench execution
 
 ## Current Caveats
 
-- The portable HDL workflow currently proves simulator availability and testbench execution, but the stub testbench remains the authoritative check for behavior.
+- The portable HDL workflow currently proves simulator availability and stable wrapper testbench execution; it is not a substitute for deeper RTL verification infrastructure.
 - The portable LaTeX workflow depends on network access the first time `tectonic` downloads support bundles.
 - The original `scripts/docs/build_docs.sh` remains useful in Bash-capable environments, but Windows users should prefer `scripts/docs/build_docs.ps1`.
 

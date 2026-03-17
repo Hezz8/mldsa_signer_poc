@@ -8,9 +8,16 @@ package wrapper_pkg;
 
   localparam int unsigned DIGEST_WORDS = 16;
   localparam int unsigned DIGEST_BYTES = 64;
+  localparam int unsigned DIGEST_BITS = DIGEST_BYTES * 8;
   localparam int unsigned SIG_WORDS = 32;
   localparam int unsigned SIG_BYTES = 128;
+  localparam int unsigned SIG_BITS = SIG_BYTES * 8;
+
   localparam int unsigned STUB_DELAY_CYCLES = 2;
+  localparam int unsigned CORE_PLACEHOLDER_DELAY_CYCLES = 4;
+
+  localparam int unsigned ENGINE_MODE_STUB = 0;
+  localparam int unsigned ENGINE_MODE_CORE_PLACEHOLDER = 1;
 
   localparam logic [31:0] CONTROL_START_MASK = 32'h0000_0001;
   localparam logic [31:0] CONTROL_CLEAR_STATUS_MASK = 32'h0000_0002;
@@ -23,6 +30,7 @@ package wrapper_pkg;
   localparam logic [31:0] ERROR_NONE = 32'h0000_0000;
   localparam logic [31:0] ERROR_START_WHILE_BUSY = 32'h0000_0001;
   localparam logic [31:0] ERROR_INVALID_OFFSET = 32'h0000_0002;
+  localparam logic [31:0] ERROR_ENGINE = 32'h0000_0003;
 
   function automatic logic [31:0] status_word(
     input logic busy,

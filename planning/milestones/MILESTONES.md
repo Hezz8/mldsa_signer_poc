@@ -19,23 +19,24 @@
 - Service and local client contract verified with tests
 - AXI-Lite wrapper stub and simple testbench created
 
-## M3: Software Skeleton Expansion
+## M3: Engine Adapter Stabilization
 
-- Linux daemon skeleton hardened around the documented device contract
-- Optional gRPC binding path enabled in a fully provisioned development environment
-- Observability and error handling expanded
+- Stable AXI-Lite wrapper top established as the PS-visible contract boundary
+- `mldsa_engine_adapter` introduced between the wrapper and future core integration
+- `STUB` and `CORE_PLACEHOLDER` adapter modes verified in simulation
+- Software contracts preserved while hardware internals gain a clean integration seam
 
 ## M4: Real PS/PL Bring-Up
 
 - PS software communicates with PL registers on target hardware
-- End-to-end path exercised using the real register interface
+- End-to-end path exercised using the stable wrapper interface
 - Continuous signing loop infrastructure available
 
-## M5: ML-DSA Core Integration
+## M5: ML-DSA-OSH Core Attachment
 
-- Hardware signing core connected behind stable wrapper interface
+- Real ML-DSA-OSH integration attached behind the engine adapter
 - Signature flow verified against known-good vectors
-- Integration regressions automated
+- Adapter and wrapper regressions automated
 
 ## M6: PoC Review
 

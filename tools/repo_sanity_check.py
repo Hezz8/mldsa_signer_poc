@@ -8,6 +8,7 @@ REQUIRED_DIRECTORIES = [
     "docs",
     "docs/architecture",
     "docs/interfaces",
+    "hw/rtl",
     "hw/wrapper",
     "hw/tb",
     "sw/daemon",
@@ -21,12 +22,16 @@ REQUIRED_DIRECTORIES = [
 REQUIRED_FILES = [
     "README.md",
     "docs/main.tex",
+    "docs/architecture/PDR.tex",
+    "docs/architecture/Hardware_Microarchitecture.tex",
     "docs/architecture/Software_Architecture.tex",
     "docs/architecture/Wrapper_Spec.tex",
+    "docs/architecture/MLDSA_OSH_Integration_Guide.tex",
     "docs/interfaces/Register_Map.tex",
-    "hw/wrapper/axi_lite_wrapper_stub.sv",
+    "hw/rtl/mldsa_engine_adapter.sv",
+    "hw/wrapper/axi_lite_wrapper.sv",
     "hw/wrapper/wrapper_pkg.sv",
-    "hw/tb/tb_axi_lite_wrapper_stub.sv",
+    "hw/tb/tb_axi_lite_wrapper.sv",
     "sw/daemon/main.py",
     "sw/daemon/server.py",
     "sw/daemon/service.py",
@@ -38,9 +43,9 @@ REQUIRED_FILES = [
     "sw/tests/test_mmio_fake_backend.py",
     "sw/tests/test_client_server_contract.py",
     "scripts/build/run_python_tests.sh",
+    "scripts/build/run_sv_stub_tb.ps1",
     "sw/proto/signing.proto",
 ]
-
 
 
 def main() -> int:

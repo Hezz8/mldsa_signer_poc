@@ -1,38 +1,38 @@
 ﻿\chapter{Verification and Validation Plan}
 
 \section*{Purpose}
-This chapter defines the initial verification strategy for the appliance.
+This chapter defines the current verification strategy for the appliance.
 
 \section{Current Verification Goal}
-The current phase validates that the external request path, MMIO sequencing, wrapper behavior, and deterministic signature readback are stable enough to support later real hardware integration.
+The current phase validates that the external request path, MMIO sequencing, wrapper behavior, engine-adapter behavior, and deterministic signature readback are stable enough to support later real hardware integration.
 
 \section{Verification Layers}
 \begin{longtable}{p{0.22\textwidth} p{0.68\textwidth}}
 \toprule
 Layer & Objective \\
 \midrule
-Documentation review & Confirm consistency across requirements, architecture, interfaces, and ADRs. \\
-Software unit tests & Validate request checking, stub signature behavior, MMIO sequencing, and local client or service contracts. \\
-Wrapper testbench & Validate reset, digest writes, start-to-busy transition, deterministic completion, and signature readback. \\
+Documentation review & Confirm consistency across requirements, architecture, interfaces, planning, and prompts. \\
+Software unit tests & Validate request checking, fake backend state transitions, and local client or service contracts. \\
+Wrapper and adapter testbench & Validate reset, digest writes, start-to-busy transition, deterministic completion, signature readback, and both adapter modes. \\
 Integration tests & Validate daemon-to-MMIO-to-stub behavior without requiring target hardware. \\
-Soak and bring-up planning & Prepare the path for later continuous-operation testing on the real PS/PL platform. \\
+Bring-up planning & Prepare the path for later continuous-operation testing on the real PS and PL platform. \\
 \bottomrule
 \end{longtable}
 
-\section{Acceptance Focus for the Stub Phase}
-The stub phase is accepted primarily on correctness, observability, deterministic behavior, and interface stability. It is explicitly not intended to prove cryptographic correctness or target throughput.
+\section{Acceptance Focus for the Adapter Phase}
+The adapter phase is accepted primarily on correctness, observability, deterministic behavior, and interface stability. It is explicitly not intended to prove cryptographic correctness or target throughput.
 
 \section{Current Test Assets}
 \begin{itemize}[leftmargin=*]
   \item Python unit tests for digest validation and fake backend state transitions
   \item Python contract tests for the local client and service path
-  \item A SystemVerilog wrapper stub testbench for reset, busy, done, and signature-window checks
+  \item A SystemVerilog wrapper testbench that covers `STUB` and `CORE\_PLACEHOLDER` adapter modes
 \end{itemize}
 
 \section{Key Exit Criteria}
 \begin{itemize}[leftmargin=*]
-  \item Documented registers and control bits are implemented consistently in software and the wrapper stub.
-  \item The fake signature behavior is deterministic and documented.
+  \item Documented registers and control bits are implemented consistently in software and the wrapper.
+  \item The deterministic adapter modes are documented and simulation-backed.
   \item The software execution path runs without real hardware.
-  \item The repository is ready for a later phase that replaces the stub datapath with real HW integration.
+  \item The repository is ready for a later phase that replaces `CORE\_PLACEHOLDER` with real ML-DSA-OSH integration.
 \end{itemize}
