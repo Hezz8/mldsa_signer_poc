@@ -4,41 +4,40 @@
 This chapter defines the current verification strategy for the appliance.
 
 \section{Current Verification Goal}
-The current phase validates that the external request path, MMIO sequencing, wrapper behavior, imported-core integration seam, and software board-bring-up infrastructure are stable enough to support later target-hardware validation.
+The current phase validates that the external request path, MMIO sequencing, wrapper behavior, imported-core integration seam, and STUB-mode board-bring-up infrastructure are stable enough to support first execution on actual Zynq hardware.
 
 \section{Verification Layers}
 \begin{longtable}{p{0.22\textwidth} p{0.68\textwidth}}
 \toprule
 Layer & Objective \\
 \midrule
-Documentation review & Confirm consistency across requirements, architecture, interfaces, planning, prompts, and board bring-up guidance. \\
-Software unit tests & Validate request checking, fake backend behavior, backend selection, probe logic, and real-backend file-mapping sanity. \\
+Documentation review & Confirm consistency across requirements, architecture, interfaces, planning, prompts, and STUB-mode bring-up guidance. \\
+Software unit tests & Validate request checking, fake backend behavior, backend selection, probe logic, real-backend file-mapping sanity, and STUB selftest behavior. \\
 Wrapper and adapter testbench & Validate reset, digest writes, start-to-busy transition, deterministic completion, signature readback, and all currently supported wrapper-visible engine modes. \\
 Imported-core inspection & Confirm that project-owned shim logic is based on the actual imported ML-DSA-OSH sign path rather than assumptions. \\
-Real-backend bring-up & Prepare safe register-visibility and STUB-mode sequencing checks for the actual target board. \\
+STUB-mode board bring-up & Prepare safe register-visibility and one-transaction STUB validation on the actual target board. \\
 \bottomrule
 \end{longtable}
 
 \section{Acceptance Focus for the Current Phase}
-The current phase is accepted on interface stability, clear software-path separation between local and target modes, practical board-bring-up scaffolding, and preservation of the existing local development flow. It is explicitly not accepted on the basis of already-proven PS-to-PL operation on real hardware.
+The current phase is accepted on interface stability, reproducible STUB-mode bring-up preparation, practical board-facing scripts, and preservation of the local development flow. It is explicitly not accepted on the basis of already-proven execution on real hardware.
 
 \section{Current Test Assets}
 \begin{itemize}[leftmargin=*]
   \item Python unit tests for digest validation and fake backend state transitions
   \item Python contract tests for the local client and service path
-  \item Python tests for backend selection, probe behavior, and file-backed real-backend sanity
+  \item Python tests for backend selection, probe behavior, file-backed real-backend sanity, and STUB selftest behavior
   \item A SystemVerilog wrapper testbench that covers `STUB`, `CORE\_PLACEHOLDER`, and the documented `MLDSA\_OSH` fallback behavior
   \item Imported-core inspection notes tied to the actual upstream source files
 \end{itemize}
 
 \section{Current Limits}
-The imported upstream sign path still requires stronger mixed-language validation than the local portable toolchain currently provides. In addition, the real MMIO backend has been implemented for target bring-up but has not yet been exercised against an actual Zynq board in this phase.
+The imported upstream sign path still requires stronger mixed-language validation than the local portable toolchain currently provides. In addition, STUB-mode board validation still depends on actual Zynq hardware, a real AXI base address, and Linux MMIO permissions.
 
 \section{Key Exit Criteria}
 \begin{itemize}[leftmargin=*]
-  \item Documented registers and control bits are implemented consistently in software and the wrapper.
   \item Deterministic `STUB` mode remains simulation-backed for regression.
-  \item The software stack can select `fake` or `real` backend modes without API churn.
-  \item A safe probe path exists for future target-board register visibility checks.
-  \item The repository is ready for a follow-on phase that performs actual PS-to-PL bring-up on hardware.
+  \item The software stack can perform a real-backend register probe without API churn.
+  \item The real selftest path checks the documented STUB signature rule explicitly.
+  \item The repository is ready for a follow-on phase that performs actual STUB-mode board execution.
 \end{itemize}

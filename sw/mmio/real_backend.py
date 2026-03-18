@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import mmap
 import os
 import struct
@@ -39,7 +40,17 @@ class RealMMIOBackend(MMIOBackend):
             self._mapping = self._create_mapping(self._fd)
         except OSError as exc:
             self.close()
-            raise BackendError(f"unable to map MMIO region via {device_path}: {exc.strerror or exc}") from exc
+            raise BackendError(self._format_open_error(exc)) from exc
+
+    def _format_open_error(self, exc: OSError) -> str:
+        message = f"unable to map MMIO region via {self.device_path}: {exc.strerror or exc}"
+        if self.device_path == "/dev/mem":
+            if exc.errno == errno.ENOENT:
+                message += "; /dev/mem is unavailable on this host or image"
+            elif exc.errno in {errno.EACCES, errno.EPERM}:
+                message += "; /dev/mem requires appropriate privileges on the target Linux system"
+            message += "; expected bring-up path is Linux on Zynq with the wrapper base address supplied"
+        return message
 
     def _create_mapping(self, fd: int) -> mmap.mmap:
         if os.name == "nt":

@@ -73,6 +73,39 @@ def _run_probe(config: DaemonConfig, clear_status: bool) -> int:
     return 0
 
 
+def _run_stub_selftest(config: DaemonConfig) -> int:
+    digest = _default_digest()
+    expected_signature = reg.build_stub_signature(digest)
+    service = create_default_service(config)
+    try:
+        local_server = LocalSigningServer(service)
+        result = local_server.handle_digest(digest)
+    except SigningExecutionError as exc:
+        logging.error("selftest failed: %s", exc)
+        return 3
+    finally:
+        service.close()
+
+    if result.signature_length != len(expected_signature):
+        logging.error(
+            "selftest signature length mismatch: expected %d bytes, got %d bytes",
+            len(expected_signature),
+            result.signature_length,
+        )
+        return 4
+
+    if result.signature != expected_signature:
+        logging.error("selftest signature mismatch against documented STUB rule")
+        logging.error("expected=%s", expected_signature.hex())
+        logging.error("actual=%s", result.signature.hex())
+        return 4
+
+    print(f"selftest status={result.status} signature_length={result.signature_length}")
+    print("verified_stub_signature=true")
+    print(result.signature.hex())
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     args = _build_parser().parse_args(argv)
@@ -96,24 +129,18 @@ def main(argv: list[str] | None = None) -> int:
             logging.error("probe failed: %s", exc)
             return 3
 
+    if args.mode == "selftest":
+        try:
+            return _run_stub_selftest(config)
+        except BackendSelectionError as exc:
+            logging.error("cannot create backend: %s", exc)
+            return 2
+
     try:
         service = create_default_service(config)
     except BackendSelectionError as exc:
         logging.error("cannot create backend: %s", exc)
         return 2
-
-    if args.mode == "selftest":
-        try:
-            local_server = LocalSigningServer(service)
-            result = local_server.handle_digest(_default_digest())
-            print(f"selftest status={result.status} signature_length={result.signature_length}")
-            print(result.signature.hex())
-            return 0
-        except SigningExecutionError as exc:
-            logging.error("selftest failed: %s", exc)
-            return 3
-        finally:
-            service.close()
 
     grpc_server = GrpcSigningServer(service, config)
     try:

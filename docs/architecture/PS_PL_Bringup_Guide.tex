@@ -4,50 +4,44 @@
 This chapter documents the first software-driven PS-to-PL bring-up path for the stable wrapper contract on Zynq UltraScale+.
 
 \section{Current Bring-Up Strategy}
-The software stack now supports two backend modes:
+The software stack supports two backend modes:
 \begin{itemize}[leftmargin=*]
   \item \textbf{fake:} local development and regression without hardware
   \item \textbf{real:} user-space MMIO access intended for Linux on the target board
 \end{itemize}
 
-The recommended first bring-up path uses the `real` backend with a bitstream configured for `STUB` engine mode. This minimizes variables while validating the PS-visible register contract on actual hardware.
+The first real bring-up target is explicitly a `STUB`-mode bitstream.
 
 \section{Wrapper Base Address Assumption}
-The real backend assumes software knows the physical base address assigned to the AXI-Lite wrapper in the platform design. That base address is not hardcoded in the repository because it is platform-integration dependent. The address shall be provided through environment variables or command-line options.
+The real backend assumes software knows the physical base address assigned to the AXI-Lite wrapper in the platform design. That base address is platform-integration dependent and must be provided through environment variables or command-line options.
 
 \section{Real Backend Access Method}
-The current real backend uses a `/dev/mem`-style memory-mapped access path suitable for proof-of-concept Linux bring-up. It assumes:
-\begin{itemize}[leftmargin=*]
-  \item little-endian 32-bit register accesses
-  \item page-aligned physical address mapping under Linux
-  \item a mapped span large enough to cover the documented wrapper register window
-\end{itemize}
-
-This is intentionally practical rather than hardened.
+The current real backend uses a `/dev/mem`-style memory-mapped access path suitable for proof-of-concept Linux bring-up. It assumes little-endian 32-bit accesses, page-aligned physical mapping behavior, and a mapped span large enough to cover the documented wrapper register window.
 
 \section{Safe First Sequence}
 \begin{enumerate}[leftmargin=*]
-  \item Program a bitstream built for `STUB` engine mode.
+  \item Program a bitstream built from `pqsig\_top\_stub\_mode.sv`.
   \item Identify the AXI-Lite wrapper base address from the platform handoff.
-  \item Configure the daemon for `real` backend mode with the base address.
+  \item Configure the daemon for `real` backend mode with that base address.
   \item Run the MMIO probe path to confirm STATUS, ERROR\_CODE, and SIG\_LENGTH visibility.
   \item If needed, clear stale status through the probe path.
-  \item Run the real-backend self-test only after probe visibility is confirmed.
-  \item Compare STUB-mode signature behavior against the deterministic documented software contract.
+  \item Run the explicit STUB selftest only after probe visibility is confirmed.
+  \item Confirm the selftest reports `verified\_stub\_signature=true`.
 \end{enumerate}
 
 \section{Engine Mode Selection Note}
-The current wrapper uses compile-time or synthesis-time engine-mode selection through RTL parameters rather than a software-visible runtime mode register. In practice, early board bring-up should therefore use separate bitstreams or explicit build configurations for `STUB` and `MLDSA\_OSH` modes.
+The current wrapper uses compile-time or synthesis-time engine-mode selection through the RTL top-level. There is no software-visible runtime mode register. In practice, early board bring-up should use separate bitstreams or explicit build targets for `STUB` and `MLDSA\_OSH` modes.
 
 \section{Transition From STUB to MLDSA\_OSH}
-After the STUB path is stable on target hardware, the next step is to load a bitstream configured for `MLDSA\_OSH` mode while keeping the same software-visible wrapper contract. The software backend, gRPC API, and MMIO sequencing should remain unchanged. Only then should bring-up focus move to larger signature lengths, imported-core completion behavior, and end-to-end sign-path validation.
+Only after the STUB path is stable on target hardware should the project move to a bitstream configured for `MLDSA\_OSH` mode. The software backend, gRPC API, and MMIO sequencing should remain unchanged across that transition.
 
 \section{Known Bring-Up Blockers}
 \begin{itemize}[leftmargin=*]
   \item The current digest-to-message adaptation inside the ML-DSA-OSH shim is provisional.
   \item Key provisioning remains PoC-only static preload data.
   \item Full local mixed-language simulation of the imported core path is still limited by tool availability.
+  \item The real backend still depends on actual Zynq address assignment and Linux permissions.
 \end{itemize}
 
 \section{Current Claim Boundary}
-This phase provides software and documentation infrastructure for real board bring-up. It does not claim that PS-to-PL communication or ML-DSA signing has already been validated on an actual target board.
+This phase provides STUB-mode board execution scaffolding. It does not claim that PS-to-PL communication or STUB-mode selftest has already been validated on an actual target board.

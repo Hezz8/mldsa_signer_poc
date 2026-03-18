@@ -12,20 +12,20 @@ else
 fi
 
 if [ -z "${PQSIG_MMIO_BASE_ADDR:-}" ]; then
-  echo "PQSIG_MMIO_BASE_ADDR must be set for the real MMIO probe" >&2
+  echo "PQSIG_MMIO_BASE_ADDR must be set for the real STUB selftest" >&2
   exit 2
 fi
 
-ARGS=("-m" "sw.daemon.main" "probe-mmio" "--backend" "real" "--mmio-base-addr" "$PQSIG_MMIO_BASE_ADDR")
+ARGS=("-m" "sw.daemon.main" "selftest" "--backend" "real" "--mmio-base-addr" "$PQSIG_MMIO_BASE_ADDR")
 if [ -n "${PQSIG_MMIO_REGION_SIZE:-}" ]; then
   ARGS+=("--mmio-region-size" "$PQSIG_MMIO_REGION_SIZE")
 fi
 if [ -n "${PQSIG_DEVMEM_PATH:-}" ]; then
   ARGS+=("--devmem-path" "$PQSIG_DEVMEM_PATH")
 fi
-if [ "${1:-}" = "--clear-status" ]; then
-  ARGS+=("--clear-status")
+if [ -n "${PQSIG_TIMEOUT_S:-}" ]; then
+  ARGS+=("--timeout-s" "$PQSIG_TIMEOUT_S")
 fi
 
-echo "Running real MMIO probe with arguments: ${ARGS[*]}"
+echo "Running real STUB selftest with arguments: ${ARGS[*]}"
 "$PYTHON_EXE" "${ARGS[@]}"

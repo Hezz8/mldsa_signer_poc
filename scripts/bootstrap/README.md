@@ -8,29 +8,7 @@ This repository uses a conservative setup strategy:
 - prefer `latexmk`, with `pdflatex` or a MiKTeX-based toolchain as the documentation fallback
 - keep target-board MMIO access behind a selectable backend so local fake-mode development remains intact
 
-## Recommended Setup
-
-On Windows PowerShell:
-
-```powershell
-.\scripts\bootstrap\setup_dev_environment.ps1
-```
-
-On Bash-compatible shells:
-
-```bash
-./scripts/bootstrap/setup_dev_environment.sh
-```
-
-These scripts:
-
-- create `.venv` if needed
-- install `pytest`, `grpcio`, `grpcio-tools`, and `protobuf`
-- print a short tool summary
-
 ## Quick Verification
-
-With the repo-local environment:
 
 ```powershell
 .\.venv\Scripts\python -m unittest discover -s sw/tests -v
@@ -41,20 +19,26 @@ powershell -ExecutionPolicy Bypass -File scripts\build\run_sv_stub_tb.ps1
 powershell -ExecutionPolicy Bypass -File scripts\docs\build_docs.ps1
 ```
 
-## Target-Build Bring-Up Inputs
+## First Target-Board Inputs
 
-The new real MMIO backend is intended for Linux on Zynq and is selected with `PQSIG_BACKEND=real` or `--backend real`.
+The STUB-mode bring-up scripts require:
 
-Useful bring-up variables:
+- `PQSIG_MMIO_BASE_ADDR`: physical wrapper base address from the platform design
+- optional `PQSIG_MMIO_REGION_SIZE`: wrapper span in bytes if non-default
+- optional `PQSIG_DEVMEM_PATH`: alternative MMIO device path if not using `/dev/mem`
 
-- `PQSIG_MMIO_BASE_ADDR`: physical wrapper base address, for example `0xA0000000`
-- `PQSIG_MMIO_REGION_SIZE`: mapped span in bytes, default matches the documented wrapper window
-- `PQSIG_DEVMEM_PATH`: memory device path, default `/dev/mem`
+## First Target-Board Commands
 
-First register visibility check on target hardware:
+Probe only:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\build\run_real_mmio_probe.ps1 -MmioBaseAddr 0xA0000000
 ```
 
-The real-backend path is PoC bring-up infrastructure, not hardened production access.
+Explicit STUB selftest:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build\run_real_stub_selftest.ps1 -MmioBaseAddr 0xA0000000
+```
+
+The first board image shall be a STUB-mode image. Do not start real board bring-up with an MLDSA_OSH-mode bitstream.

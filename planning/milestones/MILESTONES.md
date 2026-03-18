@@ -40,17 +40,22 @@
 - Real backend supports practical Linux user-space MMIO mapping for target bring-up
 - Safe MMIO probe path exists for future register visibility checks on Zynq
 - Local software tests still pass without hardware
-- Board bring-up guidance now starts with `STUB` mode before `MLDSA_OSH` mode
 
-## M6: Real PS-PL Bring-Up
+## M6: STUB-Mode Zynq Bring-Up Readiness
+
+- STUB-mode board-facing top-level scaffold exists
+- Engine mode selection is explicitly documented as a build-time choice
+- Real STUB selftest verifies the deterministic STUB signature rule
+- Board-facing scripts and checklists are ready for first Zynq execution
+- MLDSA_OSH board bring-up remains explicitly deferred
+
+## M7: Real STUB-Mode Board Execution
 
 - PS software communicates with PL registers on target hardware
-- End-to-end path is exercised using the stable wrapper interface
-- STUB-mode sequencing is verified on the actual board
-- MLDSA_OSH bring-up risks are reduced with real register visibility data
+- One STUB transaction completes on the actual board
+- STUB signature matches the documented deterministic rule
 
-## M7: PoC Review
+## M8: MLDSA_OSH Board Bring-Up
 
-- Correctness demonstrated within the verified scope
-- Continuous signing soak results documented
-- Remaining gaps, risks, and next-step recommendations captured
+- MLDSA_OSH-mode image is exercised only after STUB-mode board validation
+- Remaining imported-core board issues are characterized with real data

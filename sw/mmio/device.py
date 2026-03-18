@@ -49,8 +49,10 @@ class PQSignatureDevice:
 
     def wait_done(self, timeout_s: float, poll_interval_s: float = 0.0) -> None:
         deadline = time.monotonic() + timeout_s
+        last_status = 0
         while True:
             status = self.read_status()
+            last_status = status
             if status & reg.STATUS_ERROR_MASK:
                 error_code = self.read_error_code()
                 raise DeviceError(
@@ -59,7 +61,18 @@ class PQSignatureDevice:
             if status & reg.STATUS_DONE_MASK:
                 return
             if time.monotonic() >= deadline:
-                raise DeviceTimeoutError(f"operation did not complete within {timeout_s:.3f}s")
+                try:
+                    error_code = self.read_error_code()
+                    error_name = reg.decode_error_code(error_code)
+                except BackendError:
+                    error_code = -1
+                    error_name = "unavailable"
+                flags = ",".join(reg.decode_status(last_status)) or "none"
+                raise DeviceTimeoutError(
+                    f"operation did not complete within {timeout_s:.3f}s; "
+                    f"last_status=0x{last_status:08X} ({flags}), "
+                    f"error_code={error_code} ({error_name})"
+                )
             self.backend.tick()
             if poll_interval_s > 0.0:
                 time.sleep(poll_interval_s)

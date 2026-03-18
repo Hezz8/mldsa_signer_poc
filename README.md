@@ -8,18 +8,9 @@ The repository now includes:
 - a mode-selectable hardware engine adapter with `STUB`, `CORE_PLACEHOLDER`, and `MLDSA_OSH` paths
 - vendored ML-DSA-OSH source plus a project-owned shim behind the adapter boundary
 - a software MMIO layer with both fake and real backend paths
-- board bring-up scaffolding for future PS-to-PL validation on Zynq Linux
+- explicit STUB-mode board bring-up scaffolding for the first real Zynq interaction
 
 ## Architecture Summary
-
-The proof-of-concept architecture remains a layered HW/SW design:
-
-1. A remote client submits a signing request containing a 64-byte digest.
-2. A gRPC daemon on Linux running on the Zynq UltraScale+ PS validates and marshals the request.
-3. The daemon writes the request into an AXI-Lite accessible wrapper connected to the PL.
-4. The wrapper delegates the request to a generic ML-DSA engine adapter.
-5. The selected engine path performs deterministic stub behavior or routes toward the imported ML-DSA-OSH integration.
-6. The PS collects completion status and signature data, then returns the result through gRPC or a local fallback harness.
 
 Current hardware boundary:
 
@@ -29,101 +20,86 @@ Current software boundary:
 
 `client -> daemon -> MMIO abstraction -> (fake backend | real backend)`
 
-## Current Software Backends
+The public gRPC API and the wrapper-visible register contract remain unchanged.
 
-- `fake`: deterministic local register model used for development, tests, and local self-test.
-- `real`: PoC user-space MMIO backend intended for Linux on Zynq using a `/dev/mem`-style access path.
+## First Real Board Target
 
-The default remains `fake`, so local development behavior stays exactly as before.
+The first real board bring-up target is `STUB` mode only.
 
-## Current Bring-Up Strategy
+Success for that phase means exactly two things:
 
-The software stack is now ready for first PS-to-PL register visibility checks on target hardware. The recommended sequence is:
+1. the wrapper is visible from Linux through the real backend
+2. one explicit STUB selftest transaction returns the documented deterministic fake signature
 
-1. Start with a bitstream configured for `STUB` engine mode.
-2. Configure `PQSIG_BACKEND=real` and provide the wrapper base address.
-3. Run `python -m sw.daemon.main probe-mmio --backend real --mmio-base-addr <addr>`.
-4. Only after successful register visibility, run `python -m sw.daemon.main selftest --backend real --mmio-base-addr <addr>`.
-5. Move to `MLDSA_OSH` mode only after STUB-mode sequencing is stable.
+`MLDSA_OSH` mode is explicitly deferred until after that STUB-mode board validation succeeds.
 
-No real board success is claimed yet in this repository state.
+## How STUB Mode Is Built
 
-## Deterministic STUB Behavior
+There is no runtime register-mode switch in the current hardware.
 
-The `STUB` path is still deliberately deterministic and non-cryptographic:
+Engine mode is selected at compile time or synthesis time through the top-level used for the board image. The first board image shall use:
 
-- input must be exactly 64 bytes
-- `start` transitions the device to `busy`
-- after a deterministic two-cycle delay, the device transitions to `done`
-- the reported signature length is fixed at 128 bytes
-- the fake signature bytes are `STUBSIG || digest || zero padding`, truncated or padded to 128 bytes
+- `hw/rtl/pqsig_top_stub_mode.sv`
 
-This remains the regression and first-board-bring-up baseline.
+A future MLDSA image may use:
 
-## Real MMIO Backend Notes
+- `hw/rtl/pqsig_top_mldsa_osh_mode.sv`
 
-The real backend is practical PoC code, not hardened production access. It assumes:
+This keeps the wrapper contract unchanged while making bitstream intent explicit.
 
-- Linux user-space access to a memory-mapped device path, default `/dev/mem`
-- a known AXI-Lite wrapper base address from the platform design
-- little-endian 32-bit register access
-- page-aligned mapping behavior from the host kernel
+## Real-Board Bring-Up Commands
 
-For local testing on non-target hosts, the same backend can map a normal file so register I/O logic can be sanity-tested without real hardware.
+Safe register probe on target hardware:
 
-## Current MLDSA_OSH Path Status
-
-The repository contains a real imported ML-DSA-OSH source snapshot and a real project-owned shim based on the inspected upstream sign interface. That integration is real in the sense that:
-
-- the upstream source is present in the repository with provenance recorded
-- the adapter exposes a real `MLDSA_OSH` mode
-- the project-owned shim sequences the inspected upstream sign input order and reorders the output stream into the wrapper-visible signature buffer
-- PoC-only static key material is isolated in a dedicated include file and documented as temporary
-
-However, the current local portable simulation flow still cannot fully elaborate the imported sign path because the upstream implementation mixes Verilog and VHDL, while the current user-space toolchain does not include `ghdl` or another mixed-language elaboration flow.
-
-## Project Status
-
-- local fake-mode execution remains working
-- software tests remain working without hardware
-- the real backend and probe path exist for future target-board bring-up
-- the wrapper contract and gRPC API remain stable
-- documentation now covers board bring-up sequencing and current blockers
-- no full end-to-end PS-to-PL or cryptographic validation has been claimed yet on actual Zynq hardware
-
-## Repository Structure
-
-```text
-.
-├── README.md
-├── docs/
-├── hw/
-├── sw/
-├── scripts/
-├── tests/
-├── tools/
-├── planning/
-├── prompts/
-├── agents/
-└── .codex/
+```powershell
+python -m sw.daemon.main probe-mmio --backend real --mmio-base-addr <addr>
 ```
 
-Key areas:
+Explicit STUB selftest on target hardware:
 
-- `docs/`: architecture, interface, verification, and board bring-up documentation
-- `hw/`: wrapper, adapter, ML-DSA-OSH integration glue, imported IP, and testbench collateral
-- `sw/`: daemon, MMIO abstraction, backends, client, proto contract, and tests
-- `scripts/`: local verification, doc builds, and target-board probe helpers
-- `planning/`: roadmap and milestone tracking across bring-up phases
+```powershell
+python -m sw.daemon.main selftest --backend real --mmio-base-addr <addr>
+```
+
+The selftest writes a known 64-byte digest, starts one operation, waits for completion, reads the signature, and verifies the exact STUB rule:
+
+`STUBSIG || digest || zero padding`
+
+## Current Development Modes
+
+- `fake` backend: default local path for development, tests, local selftest, and client smoke checks
+- `real` backend: PoC `/dev/mem`-style path intended for Linux on Zynq once a real AXI-Lite base address is available
+
+The fake backend and local development flow remain intact.
+
+## Current Claim Boundary
+
+The repository is now prepared for first real board execution in STUB mode, but no actual board success is claimed yet in this repository state.
+
+What is ready now:
+
+- STUB-mode board-facing top-level scaffold
+- compile-time engine-mode selection notes
+- safe real-backend probe path
+- explicit real STUB selftest path
+- board bring-up documentation and scripts
+
+What still depends on real hardware:
+
+- AXI-Lite base-address assignment from the platform design
+- bitstream generation and loading on Zynq
+- Linux `/dev/mem` access and permissions on the target image
+- actual PS-to-PL register visibility
+- actual STUB transaction completion on the board
 
 ## Important Phase Boundaries
 
 - The external gRPC API has not changed.
 - The fake backend has not been removed.
-- The local development and test flow still runs without hardware.
-- The real backend exists for board bring-up preparation only.
-- Board bring-up should start with `STUB` mode before `MLDSA_OSH` mode.
+- Local software tests still run without hardware.
+- First real board bring-up must use `STUB` mode.
+- `MLDSA_OSH` board work is deferred until after STUB validation.
 - The digest-to-message adaptation remains provisional.
 - Key provisioning remains PoC-only static preload.
 
-This repository should now be treated as the engineering baseline for the real-MMIO and first-board-bring-up preparation phase.
+This repository should now be treated as the engineering baseline for first real Zynq STUB-mode bring-up.

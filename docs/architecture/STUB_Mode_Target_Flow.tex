@@ -1,0 +1,34 @@
+\chapter{STUB Mode Target Flow}
+
+\section*{Purpose}
+This chapter defines the first real target-hardware bring-up flow, explicitly limited to `STUB` mode.
+
+\section{Why STUB Mode Is First}
+The deterministic STUB engine mode removes ML-DSA datapath risk from the first board interaction. This allows bring-up to focus on the PS-visible AXI-Lite wrapper contract, Linux MMIO access, address assignment, and command sequencing.
+
+\section{Required Top-Level Selection}
+The first board image shall use `pqsig\_top\_stub\_mode.sv`, which instantiates the stable wrapper with `ENGINE\_MODE\_STUB`. There is no software-visible runtime mode switch in the current design.
+
+\section{Target Flow}
+\begin{enumerate}[leftmargin=*]
+  \item Build a bitstream using the STUB-mode top-level scaffold.
+  \item Load the bitstream on the target Zynq platform.
+  \item Boot Linux on the PS.
+  \item Provide the AXI-Lite wrapper base address to the software real backend.
+  \item Run the safe MMIO probe path.
+  \item Run the explicit STUB selftest path.
+  \item Confirm the returned signature matches the documented deterministic STUB rule.
+\end{enumerate}
+
+\section{Expected Software Commands}
+Example software flow on the target board:
+\begin{itemize}[leftmargin=*]
+  \item `python -m sw.daemon.main probe-mmio --backend real --mmio-base-addr <addr>`
+  \item `python -m sw.daemon.main selftest --backend real --mmio-base-addr <addr>`
+\end{itemize}
+
+\section{Success Criteria}
+Bring-up success for this phase means the wrapper is visible from Linux and one STUB-mode selftest transaction completes with the exact deterministic fake-signature result.
+
+\section{Deferred Transition}
+Only after STUB-mode board validation is complete should the project move to an MLDSA\_OSH-mode target image. That later phase must preserve the wrapper contract and software MMIO interface while expanding the hardware internals behind the adapter boundary.

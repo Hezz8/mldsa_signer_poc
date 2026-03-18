@@ -27,6 +27,26 @@ class ProbeTests(unittest.TestCase):
         self.assertIn("backend=fake", rendered)
         self.assertIn("status_flags=idle", rendered)
 
+    def test_cli_selftest_verifies_stub_signature(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = main(["selftest", "--backend", "fake"])
+        self.assertEqual(rc, 0)
+        rendered = output.getvalue()
+        self.assertIn("verified_stub_signature=true", rendered)
+
+    def test_cli_real_selftest_missing_backend_fails_cleanly(self) -> None:
+        rc = main([
+            "selftest",
+            "--backend",
+            "real",
+            "--mmio-base-addr",
+            "0xA0000000",
+            "--devmem-path",
+            "/definitely/missing",
+        ])
+        self.assertEqual(rc, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

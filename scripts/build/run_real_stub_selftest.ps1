@@ -3,7 +3,7 @@ param(
     [string]$MmioBaseAddr,
     [string]$MmioRegionSize = $env:PQSIG_MMIO_REGION_SIZE,
     [string]$DevmemPath = $env:PQSIG_DEVMEM_PATH,
-    [switch]$ClearStatus
+    [string]$TimeoutS = $env:PQSIG_TIMEOUT_S
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,18 +13,18 @@ if (-not (Test-Path $PythonExe)) {
     throw "Repo-local Python not found at $PythonExe"
 }
 
-$argsList = @("-m", "sw.daemon.main", "probe-mmio", "--backend", "real", "--mmio-base-addr", $MmioBaseAddr)
+$argsList = @("-m", "sw.daemon.main", "selftest", "--backend", "real", "--mmio-base-addr", $MmioBaseAddr)
 if ($MmioRegionSize) {
     $argsList += @("--mmio-region-size", $MmioRegionSize)
 }
 if ($DevmemPath) {
     $argsList += @("--devmem-path", $DevmemPath)
 }
-if ($ClearStatus) {
-    $argsList += "--clear-status"
+if ($TimeoutS) {
+    $argsList += @("--timeout-s", $TimeoutS)
 }
 
-Write-Host "Running real MMIO probe with arguments: $($argsList -join ' ')"
+Write-Host "Running real STUB selftest with arguments: $($argsList -join ' ')"
 & $PythonExe @argsList
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

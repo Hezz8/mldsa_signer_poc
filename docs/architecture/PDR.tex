@@ -17,16 +17,16 @@ The system accepts a 64-byte digest from a remote client, forwards it through a 
 \begin{itemize}[leftmargin=*]
   \item Use AXI-Lite for the initial PS and PL boundary to minimize integration complexity.
   \item Keep the external API pre-hash oriented so the service boundary is simple and deterministic.
-  \item Keep the wrapper contract independent from downstream engine implementation details.
   \item Preserve a deterministic `STUB` path for regression and first board bring-up.
+  \item Select engine mode at build time through the board-facing top-level, not through a software-visible runtime register.
   \item Add a real MMIO backend in software without removing the fake backend used for local development.
 \end{itemize}
 
 \section{Current Implementation Boundary}
-The repository now includes a real imported ML-DSA-OSH source snapshot, a project-owned hardware shim behind the adapter, and a software real-MMIO backend intended for target-board bring-up. The gRPC API, software device API, and wrapper-visible register contract remain stable.
+The repository includes a real imported ML-DSA-OSH source snapshot, a project-owned hardware shim behind the adapter, a software real-MMIO backend intended for target-board use, and explicit STUB-mode top-level scaffolding for the first real board image. The gRPC API, software device API, and wrapper-visible register contract remain stable.
+
+\section{Current Bring-Up Objective}
+The immediate bring-up objective is limited to STUB-mode validation on target hardware: wrapper register visibility plus one correct fake-signature transaction. MLDSA\_OSH board validation is explicitly deferred until after that step succeeds.
 
 \section{What Is Verified vs Provisional}
-Local software behavior, deterministic hardware wrapper behavior, and documentation consistency are verified. The software real backend is implemented and locally sanity-tested against file-backed mappings, but actual PS-to-PL communication on Zynq remains to be verified on target hardware. Full local mixed-language simulation of the imported upstream sign path also remains tooling-limited.
-
-\section{Deferred Topics}
-Deferred topics include production key management, hardened device-access mechanisms, end-to-end target-board validation, peak throughput optimization, and packaging for field deployment.
+Local software behavior, deterministic hardware wrapper behavior, STUB selftest logic, and documentation consistency are verified. Actual PS-to-PL communication on Zynq remains to be verified on target hardware. Full local mixed-language simulation of the imported upstream sign path also remains tooling-limited.

@@ -6,7 +6,7 @@ Establish a credible engineering path from repository bootstrap to a working pro
 
 ## Current Phase
 
-The repository is in the real-MMIO and board-bring-up preparation phase. The external API, register map base layout, software sequencing, and wrapper behavior remain stable. ML-DSA-OSH source is already imported behind the hardware adapter, and software now includes a target-facing real backend while still preserving the local fake backend.
+The repository is in the STUB-mode real-board bring-up preparation phase. The external API, register map base layout, software sequencing, and wrapper behavior remain stable. Software now contains both fake and real MMIO backends, and hardware now has explicit STUB-mode top-level scaffolding for the first real Zynq image.
 
 ## Workstreams
 
@@ -14,31 +14,25 @@ The repository is in the real-MMIO and board-bring-up preparation phase. The ext
 
 - Keep the external signing service contract stable
 - Keep the PS-PL register and control protocol synchronized across docs and code
-- Capture non-functional expectations for reliability and maintainability
+- Keep first-board success criteria limited and explicit
 
 ### 2. Software platform
 
-- Maintain the transport-independent service core and MMIO device layer
-- Keep the fake backend as the default local development path
-- Use the new real backend for target-board bring-up without changing the public software API
+- Maintain the fake backend as the default local development path
+- Use the real backend only for target-board probe and STUB selftest work
+- Preserve the public software API and gRPC contract
 
 ### 3. Hardware platform
 
 - Keep the AXI-Lite wrapper contract stable
-- Keep the engine adapter as the only intended attachment point for ML-DSA-OSH integration
-- Preserve `STUB` mode as the first real-board bring-up target
+- Select engine mode through build-time top-level choice, not runtime software switching
+- Use a dedicated STUB-mode board image for the first real bring-up
 
 ### 4. Verification and performance
 
 - Maintain unit, simulation, integration, and end-to-end verification layers
-- Separate deterministic wrapper regression from real imported-core verification
-- Add target-board register visibility and sequencing checks incrementally
-
-### 5. Security hardening
-
-- Replace PoC static key handling with a production-grade key-management approach later
-- Replace PoC MMIO access mechanisms with a more controlled deployment approach later
-- Add robustness features for malformed input and fault handling
+- Separate deterministic wrapper regression from target-board execution
+- Defer MLDSA_OSH board execution until STUB-mode board validation is complete
 
 ## Sequencing
 
@@ -62,28 +56,29 @@ The repository is in the real-MMIO and board-bring-up preparation phase. The ext
 
 - Stable wrapper top and engine adapter introduced in RTL
 - `STUB` and `CORE_PLACEHOLDER` modes validate the future integration seam
-- The software contract remains unchanged while hardware internals become more modular
 
 ### Phase E: Imported-core attachment
 
 - ML-DSA-OSH source is imported with provenance recorded
 - The adapter gains a real `MLDSA_OSH` mode through project-owned shim logic
-- Wrapper semantics and software behavior remain stable
 
 ### Phase F: Real MMIO scaffolding
 
 - Software gains a practical target-facing MMIO backend
 - A safe probe path is available for first PS-to-PL register visibility checks
-- Local development remains on the fake backend by default
 
-### Phase G: Real bring-up
+### Phase G: STUB-mode board readiness
 
-- Exercise PS and PL sequencing against the stable wrapper implementation on actual hardware
-- Start with `STUB` mode on target before attempting `MLDSA_OSH` mode
-- Validate the imported-core path on actual target hardware or a stronger verification flow
+- First board image is explicitly a STUB-mode image
+- Real selftest validates the deterministic STUB signature rule
+- Board-facing scripts and documentation are ready for first execution
 
-### Phase H: Refinement
+### Phase H: First real STUB execution
 
-- Throughput optimization
-- Security posture improvement
-- Documentation and review updates
+- Exercise PS and PL sequencing against the stable wrapper on actual hardware
+- Confirm one correct STUB transaction on the board
+
+### Phase I: MLDSA_OSH board work
+
+- Move to MLDSA_OSH-mode bitstreams only after STUB-mode board success
+- Validate imported-core behavior on actual target hardware or stronger verification flow

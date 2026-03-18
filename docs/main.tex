@@ -15,7 +15,7 @@
 
 \title{pq-signature-appliance\\Documentation Baseline}
 \author{Systems Architecture and Integration}
-\date{2026-03-17}
+\date{2026-03-18}
 
 \begin{document}
 
@@ -25,19 +25,19 @@
   \vspace{1.2cm}
   {\Large Documentation Package\par}
   \vspace{0.8cm}
-  {\large Imported-Core Plus Real-MMIO Bring-Up Baseline for ML-DSA-87 PoC on Zynq UltraScale+\par}
+  {\large STUB-Mode Real Bring-Up Baseline for ML-DSA-87 PoC on Zynq UltraScale+\par}
   \vfill
   \begin{tabular}{ll}
     Project & pq-signature-appliance \\
-    Status & Imported-core integration plus real-MMIO bring-up scaffolding \\
+    Status & STUB-mode bring-up preparation baseline \\
     Target Platform & Xilinx/AMD Zynq UltraScale+ \\
     External Interface & gRPC over Ethernet \\
     Internal Interface & AXI-Lite between PS and PL \\
     Signing Input & 64-byte digest \\
-    Current Focus & Stable wrapper contract plus first PS-to-PL bring-up path \\
+    Current Focus & First real Zynq interaction in STUB mode \\
   \end{tabular}
   \vfill
-  {\large 2026-03-17\par}
+  {\large 2026-03-18\par}
 \end{titlepage}
 
 \tableofcontents
@@ -52,6 +52,7 @@
 \input{architecture/MLDSA_Key_Provisioning_PoC}
 \input{architecture/Software_Architecture}
 \input{architecture/PS_PL_Bringup_Guide}
+\input{architecture/STUB_Mode_Target_Flow}
 \input{verification/Verification_Plan}
 \input{performance/Performance_Model}
 \input{performance/Throughput_Model_Detailed}
