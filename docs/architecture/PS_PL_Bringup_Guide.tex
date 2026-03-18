@@ -12,21 +12,24 @@ The software stack supports two backend modes:
 
 The first real bring-up target is explicitly a `STUB`-mode bitstream.
 
-\section{Wrapper Base Address Assumption}
-The real backend assumes software knows the physical base address assigned to the AXI-Lite wrapper in the platform design. That base address is platform-integration dependent and must be provided through environment variables or command-line options.
+\section{AXI-Lite Address And Region Expectation}
+The real backend assumes software knows the physical base address assigned to the AXI-Lite wrapper in the platform design. The example placeholder used throughout the bring-up documentation is `0xA0000000`, but the actual board value must come from the Vivado address editor and the exported hardware handoff.
+
+The software-visible wrapper region must cover at least `0x1314` bytes, which corresponds to the current register map through the full signature readback window. The backend performs 32-bit little-endian accesses and validates 4-byte alignment for every MMIO transaction.
 
 \section{Real Backend Access Method}
-The current real backend uses a `/dev/mem`-style memory-mapped access path suitable for proof-of-concept Linux bring-up. It assumes little-endian 32-bit accesses, page-aligned physical mapping behavior, and a mapped span large enough to cover the documented wrapper register window.
+The current real backend uses a `/dev/mem`-style memory-mapped access path suitable for proof-of-concept Linux bring-up. It assumes little-endian 32-bit accesses, page-aligned physical mapping behavior, and a mapped span large enough to cover the documented wrapper register window. The backend handles page-base alignment internally, but the documented wrapper base address from the platform design should still be recorded exactly.
 
 \section{Safe First Sequence}
 \begin{enumerate}[leftmargin=*]
   \item Program a bitstream built from `pqsig\_top\_stub\_mode.sv`.
   \item Identify the AXI-Lite wrapper base address from the platform handoff.
+  \item Confirm that the assigned wrapper region spans at least `0x1314` bytes.
   \item Configure the daemon for `real` backend mode with that base address.
   \item Run the MMIO probe path to confirm STATUS, ERROR\_CODE, and SIG\_LENGTH visibility.
   \item If needed, clear stale status through the probe path.
   \item Run the explicit STUB selftest only after probe visibility is confirmed.
-  \item Confirm the selftest reports `verified\_stub\_signature=true`.
+  \item Confirm the selftest reports `verified\_stub\_signature=true` and `signature\_length=128`.
 \end{enumerate}
 
 \section{Engine Mode Selection Note}
@@ -44,4 +47,4 @@ Only after the STUB path is stable on target hardware should the project move to
 \end{itemize}
 
 \section{Current Claim Boundary}
-This phase provides STUB-mode board execution scaffolding. It does not claim that PS-to-PL communication or STUB-mode selftest has already been validated on an actual target board.
+This phase provides a real executable STUB-mode board procedure. It does not claim that PS-to-PL communication or STUB-mode selftest has already been validated on an actual target board.
